@@ -1,0 +1,12 @@
+Sun 30 Mar 2025 19:38:55 INFO  [1;35mBuild[0m[1;33m [SequentialDataLoader][0m for [1;33m[train][0m with format [1;33m[InputType.POINTWISE][0m
+Sun 30 Mar 2025 19:38:55 INFO  [1;35m[train][0m[1;33m No Negative Sampling[0m
+Sun 30 Mar 2025 19:38:55 INFO  [1;35m[train][0m[1;36m batch_size[0m = [1;33m[1024][0m, [1;36mshuffle[0m = [1;33m[True]
+[0m
+Sun 30 Mar 2025 19:38:57 INFO  [1;35mBuild[0m[1;33m [SequentialFullDataLoader][0m for [1;33m[evaluation][0m with format [1;33m[InputType.POINTWISE][0m
+Sun 30 Mar 2025 19:38:57 INFO  [1;35mEvaluation Setting:[0m
+	[1;34mGroup by[0m user_id
+	[1;34mOrdering[0m: {'strategy': 'by', 'field': 'timestamp', 'ascending': True}
+	[1;34mSplitting[0m: {'strategy': 'loo', 'leave_one_num': 2}
+	[1;34mNegative Sampling[0m: {'strategy': 'full', 'distribution': 'uniform'}
+Sun 30 Mar 2025 19:38:57 INFO  [1;35m[evaluation][0m[1;36m batch_size[0m = [1;33m[256][0m, [1;36mshuffle[0m = [1;33m[False]
+[0m

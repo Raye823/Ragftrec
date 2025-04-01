@@ -1,0 +1,47 @@
+Sun 30 Mar 2025 19:40:17 INFO  [1;35mBuild[0m[1;33m [SequentialDataLoader][0m for [1;33m[train][0m with format [1;33m[InputType.POINTWISE][0m
+Sun 30 Mar 2025 19:40:17 INFO  [1;35m[train][0m[1;33m No Negative Sampling[0m
+Sun 30 Mar 2025 19:40:17 INFO  [1;35m[train][0m[1;36m batch_size[0m = [1;33m[1024][0m, [1;36mshuffle[0m = [1;33m[True]
+[0m
+Sun 30 Mar 2025 19:40:19 INFO  [1;35mBuild[0m[1;33m [SequentialFullDataLoader][0m for [1;33m[evaluation][0m with format [1;33m[InputType.POINTWISE][0m
+Sun 30 Mar 2025 19:40:19 INFO  [1;35mEvaluation Setting:[0m
+	[1;34mGroup by[0m user_id
+	[1;34mOrdering[0m: {'strategy': 'by', 'field': 'timestamp', 'ascending': True}
+	[1;34mSplitting[0m: {'strategy': 'loo', 'leave_one_num': 2}
+	[1;34mNegative Sampling[0m: {'strategy': 'full', 'distribution': 'uniform'}
+Sun 30 Mar 2025 19:40:19 INFO  [1;35m[evaluation][0m[1;36m batch_size[0m = [1;33m[256][0m, [1;36mshuffle[0m = [1;33m[False]
+[0m
+Sun 30 Mar 2025 19:40:22 INFO  [1;34mInitial evaluation after loading pretrained model:[0m ndcg@5: 0.0446
+Sun 30 Mar 2025 19:40:22 INFO  Complete initial evaluation results: {'recall@5': 0.0707, 'recall@10': 0.1051, 'recall@20': 0.1444, 'recall@50': 0.2165, 'mrr@5': 0.036, 'mrr@10': 0.0405, 'mrr@20': 0.0432, 'mrr@50': 0.0455, 'ndcg@5': 0.0446, 'ndcg@10': 0.0556, 'ndcg@20': 0.0655, 'ndcg@50': 0.0798}
+Sun 30 Mar 2025 19:40:35 INFO  [1;32mepoch 0 training[0m [[1;34mtime[0m: 8.84s, [1;34mtrain loss[0m: 1746.2421]
+Sun 30 Mar 2025 19:40:36 INFO  [1;32mepoch 0 evaluating[0m [[1;34mtime[0m: 1.76s, [1;34mvalid_score[0m: 0.039700]
+Sun 30 Mar 2025 19:40:36 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0674    recall@10 : 0.0972    recall@20 : 0.1358    recall@50 : 0.2095    mrr@5 : 0.0357    mrr@10 : 0.0397    mrr@20 : 0.0423    mrr@50 : 0.0446    ndcg@5 : 0.0435    ndcg@10 : 0.0532    ndcg@20 : 0.0629    ndcg@50 : 0.0775    
+Sun 30 Mar 2025 19:40:36 INFO  [1;34mSaving current best[0m: ./log/FTragrec/Amazon_Beauty\model.pth
+Sun 30 Mar 2025 19:40:45 INFO  [1;32mepoch 1 training[0m [[1;34mtime[0m: 8.66s, [1;34mtrain loss[0m: 1742.4148]
+Sun 30 Mar 2025 19:40:47 INFO  [1;32mepoch 1 evaluating[0m [[1;34mtime[0m: 1.74s, [1;34mvalid_score[0m: 0.038800]
+Sun 30 Mar 2025 19:40:47 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0656    recall@10 : 0.0952    recall@20 : 0.1337    recall@50 : 0.2063    mrr@5 : 0.0349    mrr@10 : 0.0388    mrr@20 : 0.0414    mrr@50 : 0.0437    ndcg@5 : 0.0424    ndcg@10 : 0.052    ndcg@20 : 0.0617    ndcg@50 : 0.076    
+Sun 30 Mar 2025 19:40:55 INFO  [1;32mepoch 2 training[0m [[1;34mtime[0m: 8.70s, [1;34mtrain loss[0m: 1739.5805]
+Sun 30 Mar 2025 19:40:57 INFO  [1;32mepoch 2 evaluating[0m [[1;34mtime[0m: 1.78s, [1;34mvalid_score[0m: 0.038200]
+Sun 30 Mar 2025 19:40:57 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0648    recall@10 : 0.0952    recall@20 : 0.1337    recall@50 : 0.206    mrr@5 : 0.0342    mrr@10 : 0.0382    mrr@20 : 0.0409    mrr@50 : 0.0432    ndcg@5 : 0.0418    ndcg@10 : 0.0516    ndcg@20 : 0.0613    ndcg@50 : 0.0756    
+Sun 30 Mar 2025 19:41:06 INFO  [1;32mepoch 3 training[0m [[1;34mtime[0m: 8.39s, [1;34mtrain loss[0m: 1738.9857]
+Sun 30 Mar 2025 19:41:08 INFO  [1;32mepoch 3 evaluating[0m [[1;34mtime[0m: 1.95s, [1;34mvalid_score[0m: 0.037600]
+Sun 30 Mar 2025 19:41:08 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0636    recall@10 : 0.0939    recall@20 : 0.1301    recall@50 : 0.2033    mrr@5 : 0.0335    mrr@10 : 0.0376    mrr@20 : 0.0401    mrr@50 : 0.0424    ndcg@5 : 0.041    ndcg@10 : 0.0508    ndcg@20 : 0.0599    ndcg@50 : 0.0743    
+Sun 30 Mar 2025 19:41:16 INFO  [1;32mepoch 4 training[0m [[1;34mtime[0m: 8.37s, [1;34mtrain loss[0m: 1735.8957]
+Sun 30 Mar 2025 19:41:18 INFO  [1;32mepoch 4 evaluating[0m [[1;34mtime[0m: 1.98s, [1;34mvalid_score[0m: 0.038200]
+Sun 30 Mar 2025 19:41:18 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0656    recall@10 : 0.0957    recall@20 : 0.1337    recall@50 : 0.2066    mrr@5 : 0.0342    mrr@10 : 0.0382    mrr@20 : 0.0408    mrr@50 : 0.043    ndcg@5 : 0.0419    ndcg@10 : 0.0516    ndcg@20 : 0.0612    ndcg@50 : 0.0756    
+Sun 30 Mar 2025 19:41:27 INFO  [1;32mepoch 5 training[0m [[1;34mtime[0m: 8.79s, [1;34mtrain loss[0m: 1734.6027]
+Sun 30 Mar 2025 19:41:29 INFO  [1;32mepoch 5 evaluating[0m [[1;34mtime[0m: 1.96s, [1;34mvalid_score[0m: 0.038700]
+Sun 30 Mar 2025 19:41:29 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0657    recall@10 : 0.0966    recall@20 : 0.1346    recall@50 : 0.2065    mrr@5 : 0.0346    mrr@10 : 0.0387    mrr@20 : 0.0413    mrr@50 : 0.0435    ndcg@5 : 0.0423    ndcg@10 : 0.0523    ndcg@20 : 0.0618    ndcg@50 : 0.076    
+Sun 30 Mar 2025 19:41:37 INFO  [1;32mepoch 6 training[0m [[1;34mtime[0m: 8.53s, [1;34mtrain loss[0m: 1734.0327]
+Sun 30 Mar 2025 19:41:39 INFO  [1;32mepoch 6 evaluating[0m [[1;34mtime[0m: 2.02s, [1;34mvalid_score[0m: 0.038300]
+Sun 30 Mar 2025 19:41:39 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0648    recall@10 : 0.0939    recall@20 : 0.1329    recall@50 : 0.204    mrr@5 : 0.0344    mrr@10 : 0.0383    mrr@20 : 0.041    mrr@50 : 0.0432    ndcg@5 : 0.0419    ndcg@10 : 0.0513    ndcg@20 : 0.0611    ndcg@50 : 0.0752    
+Sun 30 Mar 2025 19:41:39 INFO  Finished training, best eval result in epoch 0
+Sun 30 Mar 2025 19:41:39 INFO  Loading model structure and parameters from ./log/FTragrec/Amazon_Beauty\model.pth
+Sun 30 Mar 2025 19:41:41 INFO  best valid : {'recall@5': 0.0674, 'recall@10': 0.0972, 'recall@20': 0.1358, 'recall@50': 0.2095, 'mrr@5': 0.0357, 'mrr@10': 0.0397, 'mrr@20': 0.0423, 'mrr@50': 0.0446, 'ndcg@5': 0.0435, 'ndcg@10': 0.0532, 'ndcg@20': 0.0629, 'ndcg@50': 0.0775}
+Sun 30 Mar 2025 19:41:41 INFO  test result: {'recall@5': 0.0504, 'recall@10': 0.0768, 'recall@20': 0.1105, 'recall@50': 0.1716, 'mrr@5': 0.0271, 'mrr@10': 0.0306, 'mrr@20': 0.033, 'mrr@50': 0.0349, 'ndcg@5': 0.0329, 'ndcg@10': 0.0414, 'ndcg@20': 0.0499, 'ndcg@50': 0.062}

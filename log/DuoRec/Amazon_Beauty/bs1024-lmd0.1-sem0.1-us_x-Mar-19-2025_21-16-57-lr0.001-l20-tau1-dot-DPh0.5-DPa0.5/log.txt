@@ -1,0 +1,512 @@
+Wed 19 Mar 2025 21:16:57 INFO  
+[1;35mGeneral Hyper Parameters:
+[0m[1;36mgpu_id[0m =[1;33m 0[0m
+[1;36muse_gpu[0m =[1;33m True[0m
+[1;36mseed[0m =[1;33m 2020[0m
+[1;36mstate[0m =[1;33m INFO[0m
+[1;36mreproducibility[0m =[1;33m True[0m
+[1;36mdata_path[0m =[1;33m ./recbole/dataset\Amazon_Beauty[0m
+[1;36mshow_progress[0m =[1;33m True[0m
+
+[1;35mTraining Hyper Parameters:
+[0m[1;36mcheckpoint_dir[0m =[1;33m saved[0m
+[1;36mepochs[0m =[1;33m 100[0m
+[1;36mtrain_batch_size[0m =[1;33m 1024[0m
+[1;36mlearner[0m =[1;33m adam[0m
+[1;36mlearning_rate[0m =[1;33m 0.001[0m
+[1;36mtraining_neg_sample_num[0m =[1;33m 0[0m
+[1;36mtraining_neg_sample_distribution[0m =[1;33m uniform[0m
+[1;36meval_step[0m =[1;33m 1[0m
+[1;36mstopping_step[0m =[1;33m 10[0m
+[1;36mclip_grad_norm[0m =[1;33m None[0m
+[1;36mweight_decay[0m =[1;33m 0[0m
+[1;36mdraw_loss_pic[0m =[1;33m False[0m
+[1;36mloss_decimal_place[0m =[1;33m 4[0m
+
+[1;35mEvaluation Hyper Parameters:
+[0m[1;36meval_setting[0m =[1;33m TO_LS,full[0m
+[1;36mgroup_by_user[0m =[1;33m True[0m
+[1;36msplit_ratio[0m =[1;33m [0.8, 0.1, 0.1][0m
+[1;36mleave_one_num[0m =[1;33m 2[0m
+[1;36mreal_time_process[0m =[1;33m False[0m
+[1;36mmetrics[0m =[1;33m ['Recall', 'NDCG', 'MRR'][0m
+[1;36mtopk[0m =[1;33m [5, 10, 20, 50][0m
+[1;36mvalid_metric[0m =[1;33m MRR@10[0m
+[1;36meval_batch_size[0m =[1;33m 256[0m
+[1;36mmetric_decimal_place[0m =[1;33m 4[0m
+
+[1;35mDataset Hyper Parameters:
+[0m[1;36mfield_separator[0m =[1;33m 	[0m
+[1;36mseq_separator[0m =[1;33m  [0m
+[1;36mUSER_ID_FIELD[0m =[1;33m user_id[0m
+[1;36mITEM_ID_FIELD[0m =[1;33m item_id[0m
+[1;36mRATING_FIELD[0m =[1;33m rating[0m
+[1;36mTIME_FIELD[0m =[1;33m timestamp[0m
+[1;36mseq_len[0m =[1;33m None[0m
+[1;36mLABEL_FIELD[0m =[1;33m label[0m
+[1;36mthreshold[0m =[1;33m None[0m
+[1;36mNEG_PREFIX[0m =[1;33m neg_[0m
+[1;36mload_col[0m =[1;33m {'inter': ['user_id', 'item_id', 'rating', 'timestamp']}[0m
+[1;36munload_col[0m =[1;33m None[0m
+[1;36munused_col[0m =[1;33m None[0m
+[1;36madditional_feat_suffix[0m =[1;33m None[0m
+[1;36mlowest_val[0m =[1;33m None[0m
+[1;36mhighest_val[0m =[1;33m None[0m
+[1;36mequal_val[0m =[1;33m None[0m
+[1;36mnot_equal_val[0m =[1;33m None[0m
+[1;36mmax_user_inter_num[0m =[1;33m None[0m
+[1;36mmin_user_inter_num[0m =[1;33m 5[0m
+[1;36mmax_item_inter_num[0m =[1;33m None[0m
+[1;36mmin_item_inter_num[0m =[1;33m 5[0m
+[1;36mfields_in_same_space[0m =[1;33m None[0m
+[1;36mpreload_weight[0m =[1;33m None[0m
+[1;36mnormalize_field[0m =[1;33m None[0m
+[1;36mnormalize_all[0m =[1;33m None[0m
+[1;36mITEM_LIST_LENGTH_FIELD[0m =[1;33m item_length[0m
+[1;36mLIST_SUFFIX[0m =[1;33m _list[0m
+[1;36mMAX_ITEM_LIST_LENGTH[0m =[1;33m 50[0m
+[1;36mPOSITION_FIELD[0m =[1;33m position_id[0m
+[1;36mHEAD_ENTITY_ID_FIELD[0m =[1;33m head_id[0m
+[1;36mTAIL_ENTITY_ID_FIELD[0m =[1;33m tail_id[0m
+[1;36mRELATION_ID_FIELD[0m =[1;33m relation_id[0m
+[1;36mENTITY_ID_FIELD[0m =[1;33m entity_id[0m
+
+[1;35mOther Hyper Parameters: 
+[0m[1;36mvalid_metric_bigger[0m = [1;33mTrue[0m
+[1;36mn_layers[0m = [1;33m2[0m
+[1;36mn_heads[0m = [1;33m2[0m
+[1;36mhidden_size[0m = [1;33m64[0m
+[1;36minner_size[0m = [1;33m256[0m
+[1;36mhidden_dropout_prob[0m = [1;33m0.5[0m
+[1;36mattn_dropout_prob[0m = [1;33m0.5[0m
+[1;36mhidden_act[0m = [1;33mgelu[0m
+[1;36mlayer_norm_eps[0m = [1;33m1e-12[0m
+[1;36minitializer_range[0m = [1;33m0.02[0m
+[1;36mloss_type[0m = [1;33mCE[0m
+[1;36mlmd[0m = [1;33m0.1[0m
+[1;36mlmd_sem[0m = [1;33m0.1[0m
+[1;36mSSL_AUG[0m = [1;33mDuoRec[0m
+[1;36mrm_dup_inter[0m = [1;33mNone[0m
+[1;36mfilter_inter_by_user_or_item[0m = [1;33mTrue[0m
+[1;36mSOURCE_ID_FIELD[0m = [1;33msource_id[0m
+[1;36mTARGET_ID_FIELD[0m = [1;33mtarget_id[0m
+[1;36mbenchmark_filename[0m = [1;33mNone[0m
+[1;36mMODEL_TYPE[0m = [1;33mModelType.SEQUENTIAL[0m
+[1;36mlog_root[0m = [1;33m./log/[0m
+[1;36mtau[0m = [1;33m1[0m
+[1;36mcontrast[0m = [1;33mus_x[0m
+[1;36msim[0m = [1;33mdot[0m
+[1;36mnproc[0m = [1;33m2[0m
+[1;36mMODEL_INPUT_TYPE[0m = [1;33mInputType.POINTWISE[0m
+[1;36meval_type[0m = [1;33mEvaluatorType.RANKING[0m
+[1;36mdevice[0m = [1;33mcuda[0m
+[1;36mtrain_neg_sample_args[0m = [1;33m{'strategy': 'none'}[0m
+[1;36mlog_dir[0m = [1;33mC:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5[0m
+
+
+Wed 19 Mar 2025 21:17:02 INFO  [1;35mAmazon_Beauty[0m
+[1;34mThe number of users[0m: 22364
+[1;34mAverage actions of users[0m: 8.876358270357287
+[1;34mThe number of items[0m: 12102
+[1;34mAverage actions of items[0m: 16.403768283612923
+[1;34mThe number of inters[0m: 198502
+[1;34mThe sparsity of the dataset[0m: 99.92665707018277%
+[1;34mRemain Fields[0m: ['user_id', 'item_id', 'rating', 'timestamp']
+Wed 19 Mar 2025 21:17:10 INFO  [1;35mBuild[0m[1;33m [SequentialDataLoader][0m for [1;33m[train][0m with format [1;33m[InputType.POINTWISE][0m
+Wed 19 Mar 2025 21:17:10 INFO  [1;35m[train][0m[1;33m No Negative Sampling[0m
+Wed 19 Mar 2025 21:17:10 INFO  [1;35m[train][0m[1;36m batch_size[0m = [1;33m[1024][0m, [1;36mshuffle[0m = [1;33m[True]
+[0m
+Wed 19 Mar 2025 21:17:12 INFO  [1;35mBuild[0m[1;33m [SequentialFullDataLoader][0m for [1;33m[evaluation][0m with format [1;33m[InputType.POINTWISE][0m
+Wed 19 Mar 2025 21:17:12 INFO  [1;35mEvaluation Setting:[0m
+	[1;34mGroup by[0m user_id
+	[1;34mOrdering[0m: {'strategy': 'by', 'field': 'timestamp', 'ascending': True}
+	[1;34mSplitting[0m: {'strategy': 'loo', 'leave_one_num': 2}
+	[1;34mNegative Sampling[0m: {'strategy': 'full', 'distribution': 'uniform'}
+Wed 19 Mar 2025 21:17:12 INFO  [1;35m[evaluation][0m[1;36m batch_size[0m = [1;33m[256][0m, [1;36mshuffle[0m = [1;33m[False]
+[0m
+Wed 19 Mar 2025 21:17:13 INFO  DuoRec(
+  (item_embedding): Embedding(12102, 64, padding_idx=0)
+  (position_embedding): Embedding(50, 64)
+  (trm_encoder): TransformerEncoder(
+    (layer): ModuleList(
+      (0-1): 2 x TransformerLayer(
+        (multi_head_attention): MultiHeadAttention(
+          (query): Linear(in_features=64, out_features=64, bias=True)
+          (key): Linear(in_features=64, out_features=64, bias=True)
+          (value): Linear(in_features=64, out_features=64, bias=True)
+          (attn_dropout): Dropout(p=0.5, inplace=False)
+          (dense): Linear(in_features=64, out_features=64, bias=True)
+          (LayerNorm): LayerNorm((64,), eps=1e-12, elementwise_affine=True)
+          (out_dropout): Dropout(p=0.5, inplace=False)
+        )
+        (feed_forward): FeedForward(
+          (dense_1): Linear(in_features=64, out_features=256, bias=True)
+          (dense_2): Linear(in_features=256, out_features=64, bias=True)
+          (LayerNorm): LayerNorm((64,), eps=1e-12, elementwise_affine=True)
+          (dropout): Dropout(p=0.5, inplace=False)
+        )
+      )
+    )
+  )
+  (LayerNorm): LayerNorm((64,), eps=1e-12, elementwise_affine=True)
+  (dropout): Dropout(p=0.5, inplace=False)
+  (loss_fct): CrossEntropyLoss()
+  (aug_nce_fct): CrossEntropyLoss()
+  (sem_aug_nce_fct): CrossEntropyLoss()
+)[1;34m
+Trainable parameters[0m: 877824
+Wed 19 Mar 2025 21:17:45 INFO  [1;32mepoch 0 training[0m [[1;34mtime[0m: 31.87s, [1;34mtrain loss[0m: 1321.4580]
+Wed 19 Mar 2025 21:17:46 INFO  [1;32mepoch 0 evaluating[0m [[1;34mtime[0m: 0.83s, [1;34mvalid_score[0m: 0.005600]
+Wed 19 Mar 2025 21:17:46 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0104    recall@10 : 0.0173    recall@20 : 0.0258    recall@50 : 0.0436    ndcg@5 : 0.006    ndcg@10 : 0.0083    ndcg@20 : 0.0104    ndcg@50 : 0.0138    mrr@5 : 0.0046    mrr@10 : 0.0056    mrr@20 : 0.0061    mrr@50 : 0.0066    
+Wed 19 Mar 2025 21:17:46 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:18:18 INFO  [1;32mepoch 1 training[0m [[1;34mtime[0m: 31.31s, [1;34mtrain loss[0m: 1246.5302]
+Wed 19 Mar 2025 21:18:18 INFO  [1;32mepoch 1 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.005200]
+Wed 19 Mar 2025 21:18:18 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0104    recall@10 : 0.0147    recall@20 : 0.026    recall@50 : 0.0445    ndcg@5 : 0.006    ndcg@10 : 0.0074    ndcg@20 : 0.0103    ndcg@50 : 0.014    mrr@5 : 0.0046    mrr@10 : 0.0052    mrr@20 : 0.006    mrr@50 : 0.0066    
+Wed 19 Mar 2025 21:18:50 INFO  [1;32mepoch 2 training[0m [[1;34mtime[0m: 31.34s, [1;34mtrain loss[0m: 1241.2551]
+Wed 19 Mar 2025 21:18:50 INFO  [1;32mepoch 2 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.005400]
+Wed 19 Mar 2025 21:18:50 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0099    recall@10 : 0.0161    recall@20 : 0.026    recall@50 : 0.0452    ndcg@5 : 0.0059    ndcg@10 : 0.0079    ndcg@20 : 0.0103    ndcg@50 : 0.0141    mrr@5 : 0.0046    mrr@10 : 0.0054    mrr@20 : 0.0061    mrr@50 : 0.0066    
+Wed 19 Mar 2025 21:19:22 INFO  [1;32mepoch 3 training[0m [[1;34mtime[0m: 31.37s, [1;34mtrain loss[0m: 1238.9294]
+Wed 19 Mar 2025 21:19:23 INFO  [1;32mepoch 3 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.005500]
+Wed 19 Mar 2025 21:19:23 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0089    recall@10 : 0.0171    recall@20 : 0.0241    recall@50 : 0.0436    ndcg@5 : 0.0055    ndcg@10 : 0.0082    ndcg@20 : 0.0099    ndcg@50 : 0.0138    mrr@5 : 0.0044    mrr@10 : 0.0055    mrr@20 : 0.006    mrr@50 : 0.0066    
+Wed 19 Mar 2025 21:19:54 INFO  [1;32mepoch 4 training[0m [[1;34mtime[0m: 31.40s, [1;34mtrain loss[0m: 1231.7238]
+Wed 19 Mar 2025 21:19:55 INFO  [1;32mepoch 4 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.007600]
+Wed 19 Mar 2025 21:19:55 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0119    recall@10 : 0.0213    recall@20 : 0.0331    recall@50 : 0.056    ndcg@5 : 0.0077    ndcg@10 : 0.0107    ndcg@20 : 0.0137    ndcg@50 : 0.0182    mrr@5 : 0.0063    mrr@10 : 0.0076    mrr@20 : 0.0084    mrr@50 : 0.0091    
+Wed 19 Mar 2025 21:19:55 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:20:26 INFO  [1;32mepoch 5 training[0m [[1;34mtime[0m: 31.54s, [1;34mtrain loss[0m: 1215.0149]
+Wed 19 Mar 2025 21:20:27 INFO  [1;32mepoch 5 evaluating[0m [[1;34mtime[0m: 0.81s, [1;34mvalid_score[0m: 0.007000]
+Wed 19 Mar 2025 21:20:27 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0126    recall@10 : 0.0215    recall@20 : 0.0356    recall@50 : 0.0641    ndcg@5 : 0.0075    ndcg@10 : 0.0104    ndcg@20 : 0.0139    ndcg@50 : 0.0195    mrr@5 : 0.0058    mrr@10 : 0.007    mrr@20 : 0.008    mrr@50 : 0.0088    
+Wed 19 Mar 2025 21:20:59 INFO  [1;32mepoch 6 training[0m [[1;34mtime[0m: 31.60s, [1;34mtrain loss[0m: 1201.9959]
+Wed 19 Mar 2025 21:21:00 INFO  [1;32mepoch 6 evaluating[0m [[1;34mtime[0m: 0.81s, [1;34mvalid_score[0m: 0.007600]
+Wed 19 Mar 2025 21:21:00 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0131    recall@10 : 0.022    recall@20 : 0.0363    recall@50 : 0.0658    ndcg@5 : 0.0081    ndcg@10 : 0.0109    ndcg@20 : 0.0145    ndcg@50 : 0.0204    mrr@5 : 0.0064    mrr@10 : 0.0076    mrr@20 : 0.0086    mrr@50 : 0.0095    
+Wed 19 Mar 2025 21:21:31 INFO  [1;32mepoch 7 training[0m [[1;34mtime[0m: 31.67s, [1;34mtrain loss[0m: 1190.7684]
+Wed 19 Mar 2025 21:21:32 INFO  [1;32mepoch 7 evaluating[0m [[1;34mtime[0m: 0.80s, [1;34mvalid_score[0m: 0.008000]
+Wed 19 Mar 2025 21:21:32 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0134    recall@10 : 0.0245    recall@20 : 0.041    recall@50 : 0.0749    ndcg@5 : 0.0082    ndcg@10 : 0.0118    ndcg@20 : 0.016    ndcg@50 : 0.0226    mrr@5 : 0.0065    mrr@10 : 0.008    mrr@20 : 0.0091    mrr@50 : 0.0102    
+Wed 19 Mar 2025 21:21:32 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:22:04 INFO  [1;32mepoch 8 training[0m [[1;34mtime[0m: 31.59s, [1;34mtrain loss[0m: 1178.0926]
+Wed 19 Mar 2025 21:22:04 INFO  [1;32mepoch 8 evaluating[0m [[1;34mtime[0m: 0.81s, [1;34mvalid_score[0m: 0.011800]
+Wed 19 Mar 2025 21:22:04 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0185    recall@10 : 0.0323    recall@20 : 0.0488    recall@50 : 0.0876    ndcg@5 : 0.012    ndcg@10 : 0.0165    ndcg@20 : 0.0207    ndcg@50 : 0.0283    mrr@5 : 0.0099    mrr@10 : 0.0118    mrr@20 : 0.0129    mrr@50 : 0.0141    
+Wed 19 Mar 2025 21:22:04 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:22:36 INFO  [1;32mepoch 9 training[0m [[1;34mtime[0m: 31.50s, [1;34mtrain loss[0m: 1164.1216]
+Wed 19 Mar 2025 21:22:37 INFO  [1;32mepoch 9 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.012600]
+Wed 19 Mar 2025 21:22:37 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0217    recall@10 : 0.0367    recall@20 : 0.0583    recall@50 : 0.1051    ndcg@5 : 0.0134    ndcg@10 : 0.0182    ndcg@20 : 0.0236    ndcg@50 : 0.0328    mrr@5 : 0.0107    mrr@10 : 0.0126    mrr@20 : 0.0141    mrr@50 : 0.0155    
+Wed 19 Mar 2025 21:22:37 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:23:08 INFO  [1;32mepoch 10 training[0m [[1;34mtime[0m: 31.43s, [1;34mtrain loss[0m: 1150.6502]
+Wed 19 Mar 2025 21:23:09 INFO  [1;32mepoch 10 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.013200]
+Wed 19 Mar 2025 21:23:09 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0214    recall@10 : 0.0398    recall@20 : 0.0631    recall@50 : 0.1165    ndcg@5 : 0.0134    ndcg@10 : 0.0193    ndcg@20 : 0.0252    ndcg@50 : 0.0357    mrr@5 : 0.0108    mrr@10 : 0.0132    mrr@20 : 0.0148    mrr@50 : 0.0165    
+Wed 19 Mar 2025 21:23:09 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:23:41 INFO  [1;32mepoch 11 training[0m [[1;34mtime[0m: 31.57s, [1;34mtrain loss[0m: 1138.8108]
+Wed 19 Mar 2025 21:23:41 INFO  [1;32mepoch 11 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.013700]
+Wed 19 Mar 2025 21:23:41 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0236    recall@10 : 0.0411    recall@20 : 0.0687    recall@50 : 0.1229    ndcg@5 : 0.0144    ndcg@10 : 0.02    ndcg@20 : 0.0269    ndcg@50 : 0.0376    mrr@5 : 0.0114    mrr@10 : 0.0137    mrr@20 : 0.0156    mrr@50 : 0.0172    
+Wed 19 Mar 2025 21:23:41 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:24:13 INFO  [1;32mepoch 12 training[0m [[1;34mtime[0m: 31.73s, [1;34mtrain loss[0m: 1127.9900]
+Wed 19 Mar 2025 21:24:14 INFO  [1;32mepoch 12 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.015200]
+Wed 19 Mar 2025 21:24:14 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0249    recall@10 : 0.0473    recall@20 : 0.0741    recall@50 : 0.1295    ndcg@5 : 0.0154    ndcg@10 : 0.0226    ndcg@20 : 0.0293    ndcg@50 : 0.0402    mrr@5 : 0.0123    mrr@10 : 0.0152    mrr@20 : 0.0171    mrr@50 : 0.0187    
+Wed 19 Mar 2025 21:24:14 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:24:45 INFO  [1;32mepoch 13 training[0m [[1;34mtime[0m: 31.64s, [1;34mtrain loss[0m: 1118.5277]
+Wed 19 Mar 2025 21:24:46 INFO  [1;32mepoch 13 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.016300]
+Wed 19 Mar 2025 21:24:46 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0292    recall@10 : 0.0472    recall@20 : 0.0761    recall@50 : 0.1332    ndcg@5 : 0.0177    ndcg@10 : 0.0235    ndcg@20 : 0.0307    ndcg@50 : 0.042    mrr@5 : 0.014    mrr@10 : 0.0163    mrr@20 : 0.0183    mrr@50 : 0.0201    
+Wed 19 Mar 2025 21:24:46 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:25:18 INFO  [1;32mepoch 14 training[0m [[1;34mtime[0m: 31.67s, [1;34mtrain loss[0m: 1110.2862]
+Wed 19 Mar 2025 21:25:19 INFO  [1;32mepoch 14 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.017900]
+Wed 19 Mar 2025 21:25:19 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0308    recall@10 : 0.0519    recall@20 : 0.0804    recall@50 : 0.1383    ndcg@5 : 0.019    ndcg@10 : 0.0258    ndcg@20 : 0.0329    ndcg@50 : 0.0443    mrr@5 : 0.0151    mrr@10 : 0.0179    mrr@20 : 0.0198    mrr@50 : 0.0217    
+Wed 19 Mar 2025 21:25:19 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:25:50 INFO  [1;32mepoch 15 training[0m [[1;34mtime[0m: 31.58s, [1;34mtrain loss[0m: 1102.8960]
+Wed 19 Mar 2025 21:25:51 INFO  [1;32mepoch 15 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.018600]
+Wed 19 Mar 2025 21:25:51 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0308    recall@10 : 0.0546    recall@20 : 0.0835    recall@50 : 0.1446    ndcg@5 : 0.0192    ndcg@10 : 0.0269    ndcg@20 : 0.0342    ndcg@50 : 0.0462    mrr@5 : 0.0155    mrr@10 : 0.0186    mrr@20 : 0.0206    mrr@50 : 0.0225    
+Wed 19 Mar 2025 21:25:51 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:26:22 INFO  [1;32mepoch 16 training[0m [[1;34mtime[0m: 31.28s, [1;34mtrain loss[0m: 1095.9388]
+Wed 19 Mar 2025 21:26:23 INFO  [1;32mepoch 16 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.019900]
+Wed 19 Mar 2025 21:26:23 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.034    recall@10 : 0.0563    recall@20 : 0.084    recall@50 : 0.1478    ndcg@5 : 0.0211    ndcg@10 : 0.0283    ndcg@20 : 0.0352    ndcg@50 : 0.0478    mrr@5 : 0.0169    mrr@10 : 0.0199    mrr@20 : 0.0217    mrr@50 : 0.0237    
+Wed 19 Mar 2025 21:26:23 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:26:54 INFO  [1;32mepoch 17 training[0m [[1;34mtime[0m: 31.27s, [1;34mtrain loss[0m: 1089.5456]
+Wed 19 Mar 2025 21:26:55 INFO  [1;32mepoch 17 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.020700]
+Wed 19 Mar 2025 21:26:55 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0353    recall@10 : 0.0581    recall@20 : 0.0916    recall@50 : 0.1538    ndcg@5 : 0.022    ndcg@10 : 0.0293    ndcg@20 : 0.0377    ndcg@50 : 0.05    mrr@5 : 0.0177    mrr@10 : 0.0207    mrr@20 : 0.0229    mrr@50 : 0.0249    
+Wed 19 Mar 2025 21:26:55 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:27:27 INFO  [1;32mepoch 18 training[0m [[1;34mtime[0m: 31.27s, [1;34mtrain loss[0m: 1083.4332]
+Wed 19 Mar 2025 21:27:27 INFO  [1;32mepoch 18 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.022000]
+Wed 19 Mar 2025 21:27:27 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0382    recall@10 : 0.061    recall@20 : 0.0944    recall@50 : 0.1556    ndcg@5 : 0.0237    ndcg@10 : 0.031    ndcg@20 : 0.0394    ndcg@50 : 0.0515    mrr@5 : 0.019    mrr@10 : 0.022    mrr@20 : 0.0242    mrr@50 : 0.0262    
+Wed 19 Mar 2025 21:27:27 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:27:59 INFO  [1;32mepoch 19 training[0m [[1;34mtime[0m: 31.27s, [1;34mtrain loss[0m: 1077.7297]
+Wed 19 Mar 2025 21:27:59 INFO  [1;32mepoch 19 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.023300]
+Wed 19 Mar 2025 21:27:59 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0391    recall@10 : 0.0631    recall@20 : 0.0977    recall@50 : 0.1629    ndcg@5 : 0.0248    ndcg@10 : 0.0325    ndcg@20 : 0.0412    ndcg@50 : 0.0541    mrr@5 : 0.0202    mrr@10 : 0.0233    mrr@20 : 0.0257    mrr@50 : 0.0277    
+Wed 19 Mar 2025 21:27:59 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:28:31 INFO  [1;32mepoch 20 training[0m [[1;34mtime[0m: 31.28s, [1;34mtrain loss[0m: 1072.3064]
+Wed 19 Mar 2025 21:28:31 INFO  [1;32mepoch 20 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.024300]
+Wed 19 Mar 2025 21:28:31 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0408    recall@10 : 0.066    recall@20 : 0.1008    recall@50 : 0.1665    ndcg@5 : 0.0259    ndcg@10 : 0.034    ndcg@20 : 0.0427    ndcg@50 : 0.0557    mrr@5 : 0.021    mrr@10 : 0.0243    mrr@20 : 0.0267    mrr@50 : 0.0288    
+Wed 19 Mar 2025 21:28:31 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:29:03 INFO  [1;32mepoch 21 training[0m [[1;34mtime[0m: 31.29s, [1;34mtrain loss[0m: 1066.6211]
+Wed 19 Mar 2025 21:29:04 INFO  [1;32mepoch 21 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.025500]
+Wed 19 Mar 2025 21:29:04 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0424    recall@10 : 0.0685    recall@20 : 0.1043    recall@50 : 0.1692    ndcg@5 : 0.0271    ndcg@10 : 0.0355    ndcg@20 : 0.0445    ndcg@50 : 0.0573    mrr@5 : 0.0221    mrr@10 : 0.0255    mrr@20 : 0.028    mrr@50 : 0.03    
+Wed 19 Mar 2025 21:29:04 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:29:35 INFO  [1;32mepoch 22 training[0m [[1;34mtime[0m: 31.30s, [1;34mtrain loss[0m: 1061.5640]
+Wed 19 Mar 2025 21:29:36 INFO  [1;32mepoch 22 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.026400]
+Wed 19 Mar 2025 21:29:36 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0444    recall@10 : 0.0718    recall@20 : 0.108    recall@50 : 0.1744    ndcg@5 : 0.0281    ndcg@10 : 0.0369    ndcg@20 : 0.046    ndcg@50 : 0.0591    mrr@5 : 0.0228    mrr@10 : 0.0264    mrr@20 : 0.0289    mrr@50 : 0.0309    
+Wed 19 Mar 2025 21:29:36 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:30:07 INFO  [1;32mepoch 23 training[0m [[1;34mtime[0m: 31.31s, [1;34mtrain loss[0m: 1056.6640]
+Wed 19 Mar 2025 21:30:08 INFO  [1;32mepoch 23 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.027100]
+Wed 19 Mar 2025 21:30:08 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0454    recall@10 : 0.0728    recall@20 : 0.1093    recall@50 : 0.1777    ndcg@5 : 0.0289    ndcg@10 : 0.0377    ndcg@20 : 0.047    ndcg@50 : 0.0605    mrr@5 : 0.0235    mrr@10 : 0.0271    mrr@20 : 0.0297    mrr@50 : 0.0318    
+Wed 19 Mar 2025 21:30:08 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:30:39 INFO  [1;32mepoch 24 training[0m [[1;34mtime[0m: 31.37s, [1;34mtrain loss[0m: 1052.1109]
+Wed 19 Mar 2025 21:30:40 INFO  [1;32mepoch 24 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.028400]
+Wed 19 Mar 2025 21:30:40 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0469    recall@10 : 0.0756    recall@20 : 0.1133    recall@50 : 0.1802    ndcg@5 : 0.0301    ndcg@10 : 0.0394    ndcg@20 : 0.0489    ndcg@50 : 0.0621    mrr@5 : 0.0246    mrr@10 : 0.0284    mrr@20 : 0.031    mrr@50 : 0.0331    
+Wed 19 Mar 2025 21:30:40 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:31:11 INFO  [1;32mepoch 25 training[0m [[1;34mtime[0m: 31.45s, [1;34mtrain loss[0m: 1047.6011]
+Wed 19 Mar 2025 21:31:12 INFO  [1;32mepoch 25 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.028800]
+Wed 19 Mar 2025 21:31:12 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0494    recall@10 : 0.0771    recall@20 : 0.1155    recall@50 : 0.1825    ndcg@5 : 0.0311    ndcg@10 : 0.04    ndcg@20 : 0.0497    ndcg@50 : 0.0629    mrr@5 : 0.0251    mrr@10 : 0.0288    mrr@20 : 0.0314    mrr@50 : 0.0335    
+Wed 19 Mar 2025 21:31:12 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:31:43 INFO  [1;32mepoch 26 training[0m [[1;34mtime[0m: 31.27s, [1;34mtrain loss[0m: 1042.9202]
+Wed 19 Mar 2025 21:31:44 INFO  [1;32mepoch 26 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.029400]
+Wed 19 Mar 2025 21:31:44 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0509    recall@10 : 0.079    recall@20 : 0.1172    recall@50 : 0.1859    ndcg@5 : 0.0319    ndcg@10 : 0.041    ndcg@20 : 0.0506    ndcg@50 : 0.0641    mrr@5 : 0.0257    mrr@10 : 0.0294    mrr@20 : 0.032    mrr@50 : 0.0342    
+Wed 19 Mar 2025 21:31:44 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:32:16 INFO  [1;32mepoch 27 training[0m [[1;34mtime[0m: 31.41s, [1;34mtrain loss[0m: 1038.4610]
+Wed 19 Mar 2025 21:32:16 INFO  [1;32mepoch 27 evaluating[0m [[1;34mtime[0m: 0.80s, [1;34mvalid_score[0m: 0.030600]
+Wed 19 Mar 2025 21:32:16 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0532    recall@10 : 0.0807    recall@20 : 0.1204    recall@50 : 0.1887    ndcg@5 : 0.0334    ndcg@10 : 0.0423    ndcg@20 : 0.0523    ndcg@50 : 0.0657    mrr@5 : 0.0269    mrr@10 : 0.0306    mrr@20 : 0.0334    mrr@50 : 0.0355    
+Wed 19 Mar 2025 21:32:16 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:32:48 INFO  [1;32mepoch 28 training[0m [[1;34mtime[0m: 31.54s, [1;34mtrain loss[0m: 1034.8007]
+Wed 19 Mar 2025 21:32:49 INFO  [1;32mepoch 28 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.030900]
+Wed 19 Mar 2025 21:32:49 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0533    recall@10 : 0.0814    recall@20 : 0.1217    recall@50 : 0.192    ndcg@5 : 0.0336    ndcg@10 : 0.0427    ndcg@20 : 0.0528    ndcg@50 : 0.0667    mrr@5 : 0.0272    mrr@10 : 0.0309    mrr@20 : 0.0337    mrr@50 : 0.0359    
+Wed 19 Mar 2025 21:32:49 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:33:20 INFO  [1;32mepoch 29 training[0m [[1;34mtime[0m: 31.36s, [1;34mtrain loss[0m: 1030.2559]
+Wed 19 Mar 2025 21:33:21 INFO  [1;32mepoch 29 evaluating[0m [[1;34mtime[0m: 0.81s, [1;34mvalid_score[0m: 0.031600]
+Wed 19 Mar 2025 21:33:21 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.055    recall@10 : 0.0851    recall@20 : 0.122    recall@50 : 0.192    ndcg@5 : 0.0344    ndcg@10 : 0.0441    ndcg@20 : 0.0534    ndcg@50 : 0.0672    mrr@5 : 0.0277    mrr@10 : 0.0316    mrr@20 : 0.0342    mrr@50 : 0.0363    
+Wed 19 Mar 2025 21:33:21 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:33:53 INFO  [1;32mepoch 30 training[0m [[1;34mtime[0m: 31.56s, [1;34mtrain loss[0m: 1026.5114]
+Wed 19 Mar 2025 21:33:53 INFO  [1;32mepoch 30 evaluating[0m [[1;34mtime[0m: 0.80s, [1;34mvalid_score[0m: 0.031500]
+Wed 19 Mar 2025 21:33:53 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0547    recall@10 : 0.0834    recall@20 : 0.1246    recall@50 : 0.1959    ndcg@5 : 0.0343    ndcg@10 : 0.0436    ndcg@20 : 0.054    ndcg@50 : 0.068    mrr@5 : 0.0277    mrr@10 : 0.0315    mrr@20 : 0.0343    mrr@50 : 0.0365    
+Wed 19 Mar 2025 21:34:25 INFO  [1;32mepoch 31 training[0m [[1;34mtime[0m: 31.42s, [1;34mtrain loss[0m: 1022.7310]
+Wed 19 Mar 2025 21:34:26 INFO  [1;32mepoch 31 evaluating[0m [[1;34mtime[0m: 0.80s, [1;34mvalid_score[0m: 0.032100]
+Wed 19 Mar 2025 21:34:26 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0561    recall@10 : 0.0857    recall@20 : 0.126    recall@50 : 0.1962    ndcg@5 : 0.0351    ndcg@10 : 0.0446    ndcg@20 : 0.0548    ndcg@50 : 0.0686    mrr@5 : 0.0283    mrr@10 : 0.0321    mrr@20 : 0.0349    mrr@50 : 0.0371    
+Wed 19 Mar 2025 21:34:26 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:34:57 INFO  [1;32mepoch 32 training[0m [[1;34mtime[0m: 31.57s, [1;34mtrain loss[0m: 1019.0160]
+Wed 19 Mar 2025 21:34:58 INFO  [1;32mepoch 32 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.032600]
+Wed 19 Mar 2025 21:34:58 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0566    recall@10 : 0.0876    recall@20 : 0.1274    recall@50 : 0.1982    ndcg@5 : 0.0354    ndcg@10 : 0.0454    ndcg@20 : 0.0554    ndcg@50 : 0.0694    mrr@5 : 0.0285    mrr@10 : 0.0326    mrr@20 : 0.0353    mrr@50 : 0.0375    
+Wed 19 Mar 2025 21:34:58 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:35:29 INFO  [1;32mepoch 33 training[0m [[1;34mtime[0m: 31.36s, [1;34mtrain loss[0m: 1015.4787]
+Wed 19 Mar 2025 21:35:30 INFO  [1;32mepoch 33 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.033400]
+Wed 19 Mar 2025 21:35:30 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0576    recall@10 : 0.0872    recall@20 : 0.1287    recall@50 : 0.1985    ndcg@5 : 0.0364    ndcg@10 : 0.0459    ndcg@20 : 0.0564    ndcg@50 : 0.0702    mrr@5 : 0.0295    mrr@10 : 0.0334    mrr@20 : 0.0362    mrr@50 : 0.0384    
+Wed 19 Mar 2025 21:35:30 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:36:01 INFO  [1;32mepoch 34 training[0m [[1;34mtime[0m: 31.40s, [1;34mtrain loss[0m: 1012.0058]
+Wed 19 Mar 2025 21:36:02 INFO  [1;32mepoch 34 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.034100]
+Wed 19 Mar 2025 21:36:02 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0594    recall@10 : 0.0901    recall@20 : 0.1307    recall@50 : 0.2011    ndcg@5 : 0.0372    ndcg@10 : 0.0471    ndcg@20 : 0.0573    ndcg@50 : 0.0712    mrr@5 : 0.03    mrr@10 : 0.0341    mrr@20 : 0.0368    mrr@50 : 0.039    
+Wed 19 Mar 2025 21:36:02 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:36:34 INFO  [1;32mepoch 35 training[0m [[1;34mtime[0m: 31.32s, [1;34mtrain loss[0m: 1008.5763]
+Wed 19 Mar 2025 21:36:34 INFO  [1;32mepoch 35 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.035100]
+Wed 19 Mar 2025 21:36:34 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0604    recall@10 : 0.091    recall@20 : 0.1309    recall@50 : 0.2026    ndcg@5 : 0.0382    ndcg@10 : 0.0481    ndcg@20 : 0.0582    ndcg@50 : 0.0724    mrr@5 : 0.031    mrr@10 : 0.0351    mrr@20 : 0.0378    mrr@50 : 0.0401    
+Wed 19 Mar 2025 21:36:34 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:37:06 INFO  [1;32mepoch 36 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 1005.8192]
+Wed 19 Mar 2025 21:37:06 INFO  [1;32mepoch 36 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.034900]
+Wed 19 Mar 2025 21:37:06 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0605    recall@10 : 0.0921    recall@20 : 0.1318    recall@50 : 0.2034    ndcg@5 : 0.0381    ndcg@10 : 0.0482    ndcg@20 : 0.0582    ndcg@50 : 0.0723    mrr@5 : 0.0307    mrr@10 : 0.0349    mrr@20 : 0.0376    mrr@50 : 0.0398    
+Wed 19 Mar 2025 21:37:38 INFO  [1;32mepoch 37 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 1002.2122]
+Wed 19 Mar 2025 21:37:38 INFO  [1;32mepoch 37 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.035100]
+Wed 19 Mar 2025 21:37:38 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0609    recall@10 : 0.0915    recall@20 : 0.132    recall@50 : 0.2045    ndcg@5 : 0.0384    ndcg@10 : 0.0482    ndcg@20 : 0.0584    ndcg@50 : 0.0728    mrr@5 : 0.031    mrr@10 : 0.0351    mrr@20 : 0.0379    mrr@50 : 0.0401    
+Wed 19 Mar 2025 21:38:10 INFO  [1;32mepoch 38 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 998.8897]
+Wed 19 Mar 2025 21:38:10 INFO  [1;32mepoch 38 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.035100]
+Wed 19 Mar 2025 21:38:10 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0608    recall@10 : 0.0917    recall@20 : 0.1324    recall@50 : 0.205    ndcg@5 : 0.0384    ndcg@10 : 0.0483    ndcg@20 : 0.0586    ndcg@50 : 0.073    mrr@5 : 0.031    mrr@10 : 0.0351    mrr@20 : 0.0379    mrr@50 : 0.0402    
+Wed 19 Mar 2025 21:38:42 INFO  [1;32mepoch 39 training[0m [[1;34mtime[0m: 31.24s, [1;34mtrain loss[0m: 996.1386]
+Wed 19 Mar 2025 21:38:42 INFO  [1;32mepoch 39 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.035800]
+Wed 19 Mar 2025 21:38:42 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0629    recall@10 : 0.0939    recall@20 : 0.134    recall@50 : 0.206    ndcg@5 : 0.0394    ndcg@10 : 0.0494    ndcg@20 : 0.0595    ndcg@50 : 0.0737    mrr@5 : 0.0317    mrr@10 : 0.0358    mrr@20 : 0.0386    mrr@50 : 0.0408    
+Wed 19 Mar 2025 21:38:42 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:39:14 INFO  [1;32mepoch 40 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 993.2306]
+Wed 19 Mar 2025 21:39:14 INFO  [1;32mepoch 40 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.036500]
+Wed 19 Mar 2025 21:39:14 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0627    recall@10 : 0.0949    recall@20 : 0.1358    recall@50 : 0.2096    ndcg@5 : 0.0397    ndcg@10 : 0.0501    ndcg@20 : 0.0604    ndcg@50 : 0.075    mrr@5 : 0.0322    mrr@10 : 0.0365    mrr@20 : 0.0393    mrr@50 : 0.0416    
+Wed 19 Mar 2025 21:39:14 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:39:46 INFO  [1;32mepoch 41 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 989.6137]
+Wed 19 Mar 2025 21:39:46 INFO  [1;32mepoch 41 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.036700]
+Wed 19 Mar 2025 21:39:46 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0631    recall@10 : 0.0957    recall@20 : 0.1358    recall@50 : 0.2086    ndcg@5 : 0.0399    ndcg@10 : 0.0504    ndcg@20 : 0.0605    ndcg@50 : 0.0749    mrr@5 : 0.0323    mrr@10 : 0.0367    mrr@20 : 0.0394    mrr@50 : 0.0417    
+Wed 19 Mar 2025 21:39:46 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:40:18 INFO  [1;32mepoch 42 training[0m [[1;34mtime[0m: 31.28s, [1;34mtrain loss[0m: 987.2116]
+Wed 19 Mar 2025 21:40:18 INFO  [1;32mepoch 42 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.037100]
+Wed 19 Mar 2025 21:40:18 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0636    recall@10 : 0.0951    recall@20 : 0.1372    recall@50 : 0.2098    ndcg@5 : 0.0405    ndcg@10 : 0.0506    ndcg@20 : 0.0613    ndcg@50 : 0.0756    mrr@5 : 0.0329    mrr@10 : 0.0371    mrr@20 : 0.04    mrr@50 : 0.0423    
+Wed 19 Mar 2025 21:40:19 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:40:50 INFO  [1;32mepoch 43 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 984.3583]
+Wed 19 Mar 2025 21:40:50 INFO  [1;32mepoch 43 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.037300]
+Wed 19 Mar 2025 21:40:50 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0643    recall@10 : 0.0965    recall@20 : 0.1362    recall@50 : 0.2099    ndcg@5 : 0.0407    ndcg@10 : 0.0511    ndcg@20 : 0.0611    ndcg@50 : 0.0757    mrr@5 : 0.033    mrr@10 : 0.0373    mrr@20 : 0.04    mrr@50 : 0.0423    
+Wed 19 Mar 2025 21:40:51 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:41:22 INFO  [1;32mepoch 44 training[0m [[1;34mtime[0m: 31.20s, [1;34mtrain loss[0m: 981.6717]
+Wed 19 Mar 2025 21:41:22 INFO  [1;32mepoch 44 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.038000]
+Wed 19 Mar 2025 21:41:22 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.065    recall@10 : 0.0969    recall@20 : 0.1377    recall@50 : 0.2116    ndcg@5 : 0.0415    ndcg@10 : 0.0517    ndcg@20 : 0.062    ndcg@50 : 0.0767    mrr@5 : 0.0338    mrr@10 : 0.038    mrr@20 : 0.0408    mrr@50 : 0.0431    
+Wed 19 Mar 2025 21:41:22 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:41:54 INFO  [1;32mepoch 45 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 978.8744]
+Wed 19 Mar 2025 21:41:55 INFO  [1;32mepoch 45 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.037700]
+Wed 19 Mar 2025 21:41:55 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0662    recall@10 : 0.0969    recall@20 : 0.1398    recall@50 : 0.2122    ndcg@5 : 0.0416    ndcg@10 : 0.0515    ndcg@20 : 0.0623    ndcg@50 : 0.0767    mrr@5 : 0.0336    mrr@10 : 0.0377    mrr@20 : 0.0406    mrr@50 : 0.0429    
+Wed 19 Mar 2025 21:42:26 INFO  [1;32mepoch 46 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 976.0343]
+Wed 19 Mar 2025 21:42:26 INFO  [1;32mepoch 46 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.037700]
+Wed 19 Mar 2025 21:42:26 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0656    recall@10 : 0.0974    recall@20 : 0.1395    recall@50 : 0.2112    ndcg@5 : 0.0414    ndcg@10 : 0.0517    ndcg@20 : 0.0622    ndcg@50 : 0.0764    mrr@5 : 0.0335    mrr@10 : 0.0377    mrr@20 : 0.0406    mrr@50 : 0.0428    
+Wed 19 Mar 2025 21:42:58 INFO  [1;32mepoch 47 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 973.9011]
+Wed 19 Mar 2025 21:42:58 INFO  [1;32mepoch 47 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.038300]
+Wed 19 Mar 2025 21:42:58 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.066    recall@10 : 0.0976    recall@20 : 0.1392    recall@50 : 0.2116    ndcg@5 : 0.042    ndcg@10 : 0.0522    ndcg@20 : 0.0627    ndcg@50 : 0.077    mrr@5 : 0.0341    mrr@10 : 0.0383    mrr@20 : 0.0412    mrr@50 : 0.0434    
+Wed 19 Mar 2025 21:42:59 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:43:30 INFO  [1;32mepoch 48 training[0m [[1;34mtime[0m: 31.24s, [1;34mtrain loss[0m: 971.4718]
+Wed 19 Mar 2025 21:43:31 INFO  [1;32mepoch 48 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.037800]
+Wed 19 Mar 2025 21:43:31 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.066    recall@10 : 0.0976    recall@20 : 0.1396    recall@50 : 0.2126    ndcg@5 : 0.0416    ndcg@10 : 0.0518    ndcg@20 : 0.0624    ndcg@50 : 0.0768    mrr@5 : 0.0336    mrr@10 : 0.0378    mrr@20 : 0.0407    mrr@50 : 0.043    
+Wed 19 Mar 2025 21:44:02 INFO  [1;32mepoch 49 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 969.1309]
+Wed 19 Mar 2025 21:44:03 INFO  [1;32mepoch 49 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.038700]
+Wed 19 Mar 2025 21:44:03 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0683    recall@10 : 0.0987    recall@20 : 0.139    recall@50 : 0.2137    ndcg@5 : 0.0429    ndcg@10 : 0.0527    ndcg@20 : 0.0629    ndcg@50 : 0.0777    mrr@5 : 0.0347    mrr@10 : 0.0387    mrr@20 : 0.0414    mrr@50 : 0.0438    
+Wed 19 Mar 2025 21:44:03 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:44:34 INFO  [1;32mepoch 50 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 966.2974]
+Wed 19 Mar 2025 21:44:35 INFO  [1;32mepoch 50 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.038500]
+Wed 19 Mar 2025 21:44:35 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0672    recall@10 : 0.0994    recall@20 : 0.1405    recall@50 : 0.213    ndcg@5 : 0.0423    ndcg@10 : 0.0527    ndcg@20 : 0.0631    ndcg@50 : 0.0774    mrr@5 : 0.0342    mrr@10 : 0.0385    mrr@20 : 0.0413    mrr@50 : 0.0436    
+Wed 19 Mar 2025 21:45:06 INFO  [1;32mepoch 51 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 964.2703]
+Wed 19 Mar 2025 21:45:07 INFO  [1;32mepoch 51 evaluating[0m [[1;34mtime[0m: 0.76s, [1;34mvalid_score[0m: 0.038700]
+Wed 19 Mar 2025 21:45:07 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0681    recall@10 : 0.0996    recall@20 : 0.1413    recall@50 : 0.2135    ndcg@5 : 0.0428    ndcg@10 : 0.0529    ndcg@20 : 0.0634    ndcg@50 : 0.0777    mrr@5 : 0.0345    mrr@10 : 0.0387    mrr@20 : 0.0415    mrr@50 : 0.0438    
+Wed 19 Mar 2025 21:45:38 INFO  [1;32mepoch 52 training[0m [[1;34mtime[0m: 31.19s, [1;34mtrain loss[0m: 962.3706]
+Wed 19 Mar 2025 21:45:39 INFO  [1;32mepoch 52 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039200]
+Wed 19 Mar 2025 21:45:39 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0689    recall@10 : 0.1003    recall@20 : 0.1416    recall@50 : 0.2136    ndcg@5 : 0.0434    ndcg@10 : 0.0535    ndcg@20 : 0.064    ndcg@50 : 0.0782    mrr@5 : 0.0351    mrr@10 : 0.0392    mrr@20 : 0.0421    mrr@50 : 0.0444    
+Wed 19 Mar 2025 21:45:39 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:46:10 INFO  [1;32mepoch 53 training[0m [[1;34mtime[0m: 31.52s, [1;34mtrain loss[0m: 960.4503]
+Wed 19 Mar 2025 21:46:11 INFO  [1;32mepoch 53 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.038600]
+Wed 19 Mar 2025 21:46:11 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0685    recall@10 : 0.0995    recall@20 : 0.1409    recall@50 : 0.2146    ndcg@5 : 0.0428    ndcg@10 : 0.0529    ndcg@20 : 0.0633    ndcg@50 : 0.0779    mrr@5 : 0.0344    mrr@10 : 0.0386    mrr@20 : 0.0414    mrr@50 : 0.0438    
+Wed 19 Mar 2025 21:46:42 INFO  [1;32mepoch 54 training[0m [[1;34mtime[0m: 31.56s, [1;34mtrain loss[0m: 958.2019]
+Wed 19 Mar 2025 21:46:43 INFO  [1;32mepoch 54 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.038800]
+Wed 19 Mar 2025 21:46:43 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0685    recall@10 : 0.0995    recall@20 : 0.1405    recall@50 : 0.2143    ndcg@5 : 0.043    ndcg@10 : 0.053    ndcg@20 : 0.0634    ndcg@50 : 0.078    mrr@5 : 0.0347    mrr@10 : 0.0388    mrr@20 : 0.0416    mrr@50 : 0.044    
+Wed 19 Mar 2025 21:47:15 INFO  [1;32mepoch 55 training[0m [[1;34mtime[0m: 31.41s, [1;34mtrain loss[0m: 956.0430]
+Wed 19 Mar 2025 21:47:15 INFO  [1;32mepoch 55 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.039500]
+Wed 19 Mar 2025 21:47:15 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.07    recall@10 : 0.1009    recall@20 : 0.1421    recall@50 : 0.2167    ndcg@5 : 0.0439    ndcg@10 : 0.0539    ndcg@20 : 0.0643    ndcg@50 : 0.0791    mrr@5 : 0.0354    mrr@10 : 0.0395    mrr@20 : 0.0423    mrr@50 : 0.0447    
+Wed 19 Mar 2025 21:47:15 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:47:47 INFO  [1;32mepoch 56 training[0m [[1;34mtime[0m: 31.53s, [1;34mtrain loss[0m: 954.3166]
+Wed 19 Mar 2025 21:47:48 INFO  [1;32mepoch 56 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039500]
+Wed 19 Mar 2025 21:47:48 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.1011    recall@20 : 0.1421    recall@50 : 0.2145    ndcg@5 : 0.0441    ndcg@10 : 0.054    ndcg@20 : 0.0643    ndcg@50 : 0.0787    mrr@5 : 0.0355    mrr@10 : 0.0395    mrr@20 : 0.0424    mrr@50 : 0.0447    
+Wed 19 Mar 2025 21:48:19 INFO  [1;32mepoch 57 training[0m [[1;34mtime[0m: 31.54s, [1;34mtrain loss[0m: 952.4193]
+Wed 19 Mar 2025 21:48:20 INFO  [1;32mepoch 57 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039200]
+Wed 19 Mar 2025 21:48:20 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0693    recall@10 : 0.1022    recall@20 : 0.1421    recall@50 : 0.2152    ndcg@5 : 0.0434    ndcg@10 : 0.0539    ndcg@20 : 0.064    ndcg@50 : 0.0784    mrr@5 : 0.0348    mrr@10 : 0.0392    mrr@20 : 0.0419    mrr@50 : 0.0442    
+Wed 19 Mar 2025 21:48:52 INFO  [1;32mepoch 58 training[0m [[1;34mtime[0m: 31.49s, [1;34mtrain loss[0m: 949.9205]
+Wed 19 Mar 2025 21:48:52 INFO  [1;32mepoch 58 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.040100]
+Wed 19 Mar 2025 21:48:52 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.1023    recall@20 : 0.1412    recall@50 : 0.2155    ndcg@5 : 0.0443    ndcg@10 : 0.0546    ndcg@20 : 0.0645    ndcg@50 : 0.0792    mrr@5 : 0.0358    mrr@10 : 0.0401    mrr@20 : 0.0427    mrr@50 : 0.0451    
+Wed 19 Mar 2025 21:48:52 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:49:24 INFO  [1;32mepoch 59 training[0m [[1;34mtime[0m: 31.40s, [1;34mtrain loss[0m: 947.8036]
+Wed 19 Mar 2025 21:49:24 INFO  [1;32mepoch 59 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039500]
+Wed 19 Mar 2025 21:49:24 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.1022    recall@20 : 0.1418    recall@50 : 0.2153    ndcg@5 : 0.044    ndcg@10 : 0.0542    ndcg@20 : 0.0642    ndcg@50 : 0.0788    mrr@5 : 0.0354    mrr@10 : 0.0395    mrr@20 : 0.0423    mrr@50 : 0.0446    
+Wed 19 Mar 2025 21:49:56 INFO  [1;32mepoch 60 training[0m [[1;34mtime[0m: 31.23s, [1;34mtrain loss[0m: 946.3439]
+Wed 19 Mar 2025 21:49:56 INFO  [1;32mepoch 60 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039700]
+Wed 19 Mar 2025 21:49:56 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0699    recall@10 : 0.1032    recall@20 : 0.1436    recall@50 : 0.217    ndcg@5 : 0.0439    ndcg@10 : 0.0546    ndcg@20 : 0.0647    ndcg@50 : 0.0792    mrr@5 : 0.0354    mrr@10 : 0.0397    mrr@20 : 0.0425    mrr@50 : 0.0448    
+Wed 19 Mar 2025 21:50:28 INFO  [1;32mepoch 61 training[0m [[1;34mtime[0m: 31.21s, [1;34mtrain loss[0m: 944.6134]
+Wed 19 Mar 2025 21:50:28 INFO  [1;32mepoch 61 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040100]
+Wed 19 Mar 2025 21:50:28 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0701    recall@10 : 0.1031    recall@20 : 0.1448    recall@50 : 0.2167    ndcg@5 : 0.0443    ndcg@10 : 0.0549    ndcg@20 : 0.0653    ndcg@50 : 0.0795    mrr@5 : 0.0358    mrr@10 : 0.0401    mrr@20 : 0.043    mrr@50 : 0.0452    
+Wed 19 Mar 2025 21:51:00 INFO  [1;32mepoch 62 training[0m [[1;34mtime[0m: 31.31s, [1;34mtrain loss[0m: 942.7829]
+Wed 19 Mar 2025 21:51:01 INFO  [1;32mepoch 62 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040200]
+Wed 19 Mar 2025 21:51:01 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0695    recall@10 : 0.1031    recall@20 : 0.1435    recall@50 : 0.2167    ndcg@5 : 0.0441    ndcg@10 : 0.055    ndcg@20 : 0.0651    ndcg@50 : 0.0796    mrr@5 : 0.0358    mrr@10 : 0.0402    mrr@20 : 0.043    mrr@50 : 0.0453    
+Wed 19 Mar 2025 21:51:01 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:51:32 INFO  [1;32mepoch 63 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 941.2583]
+Wed 19 Mar 2025 21:51:33 INFO  [1;32mepoch 63 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039800]
+Wed 19 Mar 2025 21:51:33 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.1027    recall@20 : 0.1432    recall@50 : 0.2161    ndcg@5 : 0.0441    ndcg@10 : 0.0545    ndcg@20 : 0.0648    ndcg@50 : 0.0792    mrr@5 : 0.0355    mrr@10 : 0.0398    mrr@20 : 0.0426    mrr@50 : 0.0449    
+Wed 19 Mar 2025 21:52:04 INFO  [1;32mepoch 64 training[0m [[1;34mtime[0m: 31.24s, [1;34mtrain loss[0m: 939.1401]
+Wed 19 Mar 2025 21:52:05 INFO  [1;32mepoch 64 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040000]
+Wed 19 Mar 2025 21:52:05 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0708    recall@10 : 0.1033    recall@20 : 0.1435    recall@50 : 0.2166    ndcg@5 : 0.0443    ndcg@10 : 0.0548    ndcg@20 : 0.0649    ndcg@50 : 0.0794    mrr@5 : 0.0357    mrr@10 : 0.04    mrr@20 : 0.0427    mrr@50 : 0.045    
+Wed 19 Mar 2025 21:52:36 INFO  [1;32mepoch 65 training[0m [[1;34mtime[0m: 31.24s, [1;34mtrain loss[0m: 937.7031]
+Wed 19 Mar 2025 21:52:37 INFO  [1;32mepoch 65 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040500]
+Wed 19 Mar 2025 21:52:37 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0707    recall@10 : 0.1051    recall@20 : 0.1444    recall@50 : 0.2165    ndcg@5 : 0.0446    ndcg@10 : 0.0556    ndcg@20 : 0.0655    ndcg@50 : 0.0798    mrr@5 : 0.036    mrr@10 : 0.0405    mrr@20 : 0.0432    mrr@50 : 0.0455    
+Wed 19 Mar 2025 21:52:37 INFO  [1;34mSaving current best[0m: C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:53:08 INFO  [1;32mepoch 66 training[0m [[1;34mtime[0m: 31.22s, [1;34mtrain loss[0m: 936.3358]
+Wed 19 Mar 2025 21:53:09 INFO  [1;32mepoch 66 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040100]
+Wed 19 Mar 2025 21:53:09 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0708    recall@10 : 0.1042    recall@20 : 0.1443    recall@50 : 0.2158    ndcg@5 : 0.0444    ndcg@10 : 0.0551    ndcg@20 : 0.0652    ndcg@50 : 0.0794    mrr@5 : 0.0357    mrr@10 : 0.0401    mrr@20 : 0.0429    mrr@50 : 0.0451    
+Wed 19 Mar 2025 21:53:40 INFO  [1;32mepoch 67 training[0m [[1;34mtime[0m: 31.25s, [1;34mtrain loss[0m: 934.4824]
+Wed 19 Mar 2025 21:53:41 INFO  [1;32mepoch 67 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040100]
+Wed 19 Mar 2025 21:53:41 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0715    recall@10 : 0.1029    recall@20 : 0.1451    recall@50 : 0.2178    ndcg@5 : 0.0447    ndcg@10 : 0.0548    ndcg@20 : 0.0655    ndcg@50 : 0.0798    mrr@5 : 0.0359    mrr@10 : 0.0401    mrr@20 : 0.043    mrr@50 : 0.0453    
+Wed 19 Mar 2025 21:54:12 INFO  [1;32mepoch 68 training[0m [[1;34mtime[0m: 31.23s, [1;34mtrain loss[0m: 933.0810]
+Wed 19 Mar 2025 21:54:13 INFO  [1;32mepoch 68 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040500]
+Wed 19 Mar 2025 21:54:13 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0716    recall@10 : 0.1047    recall@20 : 0.1459    recall@50 : 0.2175    ndcg@5 : 0.045    ndcg@10 : 0.0556    ndcg@20 : 0.0659    ndcg@50 : 0.0801    mrr@5 : 0.0362    mrr@10 : 0.0405    mrr@20 : 0.0434    mrr@50 : 0.0456    
+Wed 19 Mar 2025 21:54:44 INFO  [1;32mepoch 69 training[0m [[1;34mtime[0m: 31.32s, [1;34mtrain loss[0m: 931.6722]
+Wed 19 Mar 2025 21:54:45 INFO  [1;32mepoch 69 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.040400]
+Wed 19 Mar 2025 21:54:45 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0723    recall@10 : 0.1048    recall@20 : 0.1452    recall@50 : 0.2184    ndcg@5 : 0.045    ndcg@10 : 0.0555    ndcg@20 : 0.0656    ndcg@50 : 0.0802    mrr@5 : 0.0361    mrr@10 : 0.0404    mrr@20 : 0.0431    mrr@50 : 0.0455    
+Wed 19 Mar 2025 21:55:16 INFO  [1;32mepoch 70 training[0m [[1;34mtime[0m: 31.44s, [1;34mtrain loss[0m: 930.3602]
+Wed 19 Mar 2025 21:55:17 INFO  [1;32mepoch 70 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.039900]
+Wed 19 Mar 2025 21:55:17 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0721    recall@10 : 0.1054    recall@20 : 0.1456    recall@50 : 0.2179    ndcg@5 : 0.0445    ndcg@10 : 0.0552    ndcg@20 : 0.0654    ndcg@50 : 0.0797    mrr@5 : 0.0355    mrr@10 : 0.0399    mrr@20 : 0.0426    mrr@50 : 0.0449    
+Wed 19 Mar 2025 21:55:48 INFO  [1;32mepoch 71 training[0m [[1;34mtime[0m: 31.46s, [1;34mtrain loss[0m: 928.6526]
+Wed 19 Mar 2025 21:55:49 INFO  [1;32mepoch 71 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040200]
+Wed 19 Mar 2025 21:55:49 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0702    recall@10 : 0.105    recall@20 : 0.1449    recall@50 : 0.218    ndcg@5 : 0.0442    ndcg@10 : 0.0554    ndcg@20 : 0.0654    ndcg@50 : 0.0799    mrr@5 : 0.0356    mrr@10 : 0.0402    mrr@20 : 0.043    mrr@50 : 0.0453    
+Wed 19 Mar 2025 21:56:21 INFO  [1;32mepoch 72 training[0m [[1;34mtime[0m: 31.35s, [1;34mtrain loss[0m: 927.1666]
+Wed 19 Mar 2025 21:56:21 INFO  [1;32mepoch 72 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039900]
+Wed 19 Mar 2025 21:56:21 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.072    recall@10 : 0.1049    recall@20 : 0.1452    recall@50 : 0.219    ndcg@5 : 0.0446    ndcg@10 : 0.0552    ndcg@20 : 0.0653    ndcg@50 : 0.0799    mrr@5 : 0.0356    mrr@10 : 0.0399    mrr@20 : 0.0427    mrr@50 : 0.045    
+Wed 19 Mar 2025 21:56:53 INFO  [1;32mepoch 73 training[0m [[1;34mtime[0m: 31.31s, [1;34mtrain loss[0m: 926.3140]
+Wed 19 Mar 2025 21:56:53 INFO  [1;32mepoch 73 evaluating[0m [[1;34mtime[0m: 0.79s, [1;34mvalid_score[0m: 0.040100]
+Wed 19 Mar 2025 21:56:53 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0713    recall@10 : 0.1052    recall@20 : 0.146    recall@50 : 0.2192    ndcg@5 : 0.0445    ndcg@10 : 0.0554    ndcg@20 : 0.0656    ndcg@50 : 0.0801    mrr@5 : 0.0357    mrr@10 : 0.0401    mrr@20 : 0.0429    mrr@50 : 0.0452    
+Wed 19 Mar 2025 21:57:25 INFO  [1;32mepoch 74 training[0m [[1;34mtime[0m: 31.26s, [1;34mtrain loss[0m: 924.4518]
+Wed 19 Mar 2025 21:57:25 INFO  [1;32mepoch 74 evaluating[0m [[1;34mtime[0m: 0.78s, [1;34mvalid_score[0m: 0.040000]
+Wed 19 Mar 2025 21:57:25 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0719    recall@10 : 0.1055    recall@20 : 0.1463    recall@50 : 0.2185    ndcg@5 : 0.0445    ndcg@10 : 0.0553    ndcg@20 : 0.0656    ndcg@50 : 0.0799    mrr@5 : 0.0355    mrr@10 : 0.04    mrr@20 : 0.0428    mrr@50 : 0.045    
+Wed 19 Mar 2025 21:57:57 INFO  [1;32mepoch 75 training[0m [[1;34mtime[0m: 31.23s, [1;34mtrain loss[0m: 923.0022]
+Wed 19 Mar 2025 21:57:57 INFO  [1;32mepoch 75 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.039800]
+Wed 19 Mar 2025 21:57:57 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0715    recall@10 : 0.1045    recall@20 : 0.146    recall@50 : 0.2192    ndcg@5 : 0.0443    ndcg@10 : 0.055    ndcg@20 : 0.0655    ndcg@50 : 0.08    mrr@5 : 0.0354    mrr@10 : 0.0398    mrr@20 : 0.0427    mrr@50 : 0.045    
+Wed 19 Mar 2025 21:58:29 INFO  [1;32mepoch 76 training[0m [[1;34mtime[0m: 31.21s, [1;34mtrain loss[0m: 922.5005]
+Wed 19 Mar 2025 21:58:29 INFO  [1;32mepoch 76 evaluating[0m [[1;34mtime[0m: 0.77s, [1;34mvalid_score[0m: 0.040000]
+Wed 19 Mar 2025 21:58:29 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0719    recall@10 : 0.1058    recall@20 : 0.1468    recall@50 : 0.2187    ndcg@5 : 0.0445    ndcg@10 : 0.0555    ndcg@20 : 0.0658    ndcg@50 : 0.08    mrr@5 : 0.0356    mrr@10 : 0.04    mrr@20 : 0.0428    mrr@50 : 0.0451    
+Wed 19 Mar 2025 21:58:29 INFO  Finished training, best eval result in epoch 65
+Wed 19 Mar 2025 21:58:32 INFO  Loading model structure and parameters from C:\Users\Administrator\Desktop\programming\python\recsys\RaSeRec\log\DuoRec\Amazon_Beauty\bs1024-lmd0.1-sem0.1-us_x-Mar-19-2025_21-16-57-lr0.001-l20-tau1-dot-DPh0.5-DPa0.5\model.pth
+Wed 19 Mar 2025 21:58:33 INFO  [1;33mbest valid [0m: {'recall@5': 0.0707, 'recall@10': 0.1051, 'recall@20': 0.1444, 'recall@50': 0.2165, 'ndcg@5': 0.0446, 'ndcg@10': 0.0556, 'ndcg@20': 0.0655, 'ndcg@50': 0.0798, 'mrr@5': 0.036, 'mrr@10': 0.0405, 'mrr@20': 0.0432, 'mrr@50': 0.0455}
+Wed 19 Mar 2025 21:58:33 INFO  [1;33mtest result[0m: {'recall@5': 0.0537, 'recall@10': 0.0816, 'recall@20': 0.1154, 'recall@50': 0.1766, 'ndcg@5': 0.0342, 'ndcg@10': 0.0431, 'ndcg@20': 0.0516, 'ndcg@50': 0.0637, 'mrr@5': 0.0278, 'mrr@10': 0.0314, 'mrr@20': 0.0338, 'mrr@50': 0.0357}
