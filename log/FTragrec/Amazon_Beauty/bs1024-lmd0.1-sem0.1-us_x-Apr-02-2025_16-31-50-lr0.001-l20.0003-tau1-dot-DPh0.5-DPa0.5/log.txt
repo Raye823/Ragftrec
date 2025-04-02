@@ -1,0 +1,100 @@
+Wed 02 Apr 2025 16:31:54 INFO  [1;35mBuild[0m[1;33m [SequentialDataLoader][0m for [1;33m[train][0m with format [1;33m[InputType.POINTWISE][0m
+Wed 02 Apr 2025 16:31:54 INFO  [1;35m[train][0m[1;33m No Negative Sampling[0m
+Wed 02 Apr 2025 16:31:54 INFO  [1;35m[train][0m[1;36m batch_size[0m = [1;33m[1024][0m, [1;36mshuffle[0m = [1;33m[True]
+[0m
+Wed 02 Apr 2025 16:31:56 INFO  [1;35mBuild[0m[1;33m [SequentialFullDataLoader][0m for [1;33m[evaluation][0m with format [1;33m[InputType.POINTWISE][0m
+Wed 02 Apr 2025 16:31:56 INFO  [1;35mEvaluation Setting:[0m
+	[1;34mGroup by[0m user_id
+	[1;34mOrdering[0m: {'strategy': 'by', 'field': 'timestamp', 'ascending': True}
+	[1;34mSplitting[0m: {'strategy': 'loo', 'leave_one_num': 2}
+	[1;34mNegative Sampling[0m: {'strategy': 'full', 'distribution': 'uniform'}
+Wed 02 Apr 2025 16:31:56 INFO  [1;35m[evaluation][0m[1;36m batch_size[0m = [1;33m[256][0m, [1;36mshuffle[0m = [1;33m[False]
+[0m
+Wed 02 Apr 2025 16:31:58 INFO  [1;34mInitial evaluation after loading pretrained model:[0m ndcg@5: 0.0446
+Wed 02 Apr 2025 16:31:58 INFO  Complete initial evaluation results: {'recall@5': 0.0707, 'recall@10': 0.1051, 'recall@20': 0.1444, 'recall@50': 0.2165, 'mrr@5': 0.036, 'mrr@10': 0.0405, 'mrr@20': 0.0432, 'mrr@50': 0.0455, 'ndcg@5': 0.0446, 'ndcg@10': 0.0556, 'ndcg@20': 0.0655, 'ndcg@50': 0.0798}
+Wed 02 Apr 2025 16:32:12 INFO  [1;32mepoch 0 training[0m [[1;34mtime[0m: 9.02s, [1;34mtrain loss[0m: 1520.9271]
+Wed 02 Apr 2025 16:32:13 INFO  [1;32mepoch 0 evaluating[0m [[1;34mtime[0m: 1.71s, [1;34mvalid_score[0m: 0.040600]
+Wed 02 Apr 2025 16:32:13 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.104    recall@20 : 0.1456    recall@50 : 0.2171    mrr@5 : 0.0362    mrr@10 : 0.0406    mrr@20 : 0.0434    mrr@50 : 0.0457    ndcg@5 : 0.0446    ndcg@10 : 0.0554    ndcg@20 : 0.0659    ndcg@50 : 0.08    
+Wed 02 Apr 2025 16:32:13 INFO  [1;34mSaving current best[0m: ./log/FTragrec/Amazon_Beauty\model.pth
+Wed 02 Apr 2025 16:32:22 INFO  [1;32mepoch 1 training[0m [[1;34mtime[0m: 8.28s, [1;34mtrain loss[0m: 1517.3176]
+Wed 02 Apr 2025 16:32:23 INFO  [1;32mepoch 1 evaluating[0m [[1;34mtime[0m: 1.78s, [1;34mvalid_score[0m: 0.040400]
+Wed 02 Apr 2025 16:32:24 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0705    recall@10 : 0.104    recall@20 : 0.1451    recall@50 : 0.217    mrr@5 : 0.036    mrr@10 : 0.0404    mrr@20 : 0.0432    mrr@50 : 0.0455    ndcg@5 : 0.0445    ndcg@10 : 0.0553    ndcg@20 : 0.0656    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:32:32 INFO  [1;32mepoch 2 training[0m [[1;34mtime[0m: 8.26s, [1;34mtrain loss[0m: 1516.3608]
+Wed 02 Apr 2025 16:32:33 INFO  [1;32mepoch 2 evaluating[0m [[1;34mtime[0m: 1.74s, [1;34mvalid_score[0m: 0.040500]
+Wed 02 Apr 2025 16:32:33 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0705    recall@10 : 0.1039    recall@20 : 0.1447    recall@50 : 0.217    mrr@5 : 0.0361    mrr@10 : 0.0405    mrr@20 : 0.0433    mrr@50 : 0.0456    ndcg@5 : 0.0446    ndcg@10 : 0.0553    ndcg@20 : 0.0656    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:32:42 INFO  [1;32mepoch 3 training[0m [[1;34mtime[0m: 8.23s, [1;34mtrain loss[0m: 1517.3366]
+Wed 02 Apr 2025 16:32:44 INFO  [1;32mepoch 3 evaluating[0m [[1;34mtime[0m: 1.79s, [1;34mvalid_score[0m: 0.040500]
+Wed 02 Apr 2025 16:32:44 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0709    recall@10 : 0.1043    recall@20 : 0.1447    recall@50 : 0.2171    mrr@5 : 0.0361    mrr@10 : 0.0405    mrr@20 : 0.0432    mrr@50 : 0.0455    ndcg@5 : 0.0447    ndcg@10 : 0.0554    ndcg@20 : 0.0656    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:32:52 INFO  [1;32mepoch 4 training[0m [[1;34mtime[0m: 8.61s, [1;34mtrain loss[0m: 1515.6688]
+Wed 02 Apr 2025 16:32:54 INFO  [1;32mepoch 4 evaluating[0m [[1;34mtime[0m: 1.97s, [1;34mvalid_score[0m: 0.040400]
+Wed 02 Apr 2025 16:32:54 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0707    recall@10 : 0.104    recall@20 : 0.1448    recall@50 : 0.2166    mrr@5 : 0.036    mrr@10 : 0.0404    mrr@20 : 0.0432    mrr@50 : 0.0455    ndcg@5 : 0.0446    ndcg@10 : 0.0553    ndcg@20 : 0.0656    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:33:03 INFO  [1;32mepoch 5 training[0m [[1;34mtime[0m: 9.10s, [1;34mtrain loss[0m: 1514.1814]
+Wed 02 Apr 2025 16:33:05 INFO  [1;32mepoch 5 evaluating[0m [[1;34mtime[0m: 2.00s, [1;34mvalid_score[0m: 0.040500]
+Wed 02 Apr 2025 16:33:05 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0705    recall@10 : 0.1037    recall@20 : 0.1443    recall@50 : 0.2169    mrr@5 : 0.0361    mrr@10 : 0.0405    mrr@20 : 0.0432    mrr@50 : 0.0455    ndcg@5 : 0.0446    ndcg@10 : 0.0553    ndcg@20 : 0.0655    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:33:14 INFO  [1;32mepoch 6 training[0m [[1;34mtime[0m: 9.19s, [1;34mtrain loss[0m: 1516.9264]
+Wed 02 Apr 2025 16:33:16 INFO  [1;32mepoch 6 evaluating[0m [[1;34mtime[0m: 2.06s, [1;34mvalid_score[0m: 0.040400]
+Wed 02 Apr 2025 16:33:16 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0703    recall@10 : 0.1036    recall@20 : 0.1446    recall@50 : 0.2164    mrr@5 : 0.036    mrr@10 : 0.0404    mrr@20 : 0.0432    mrr@50 : 0.0454    ndcg@5 : 0.0445    ndcg@10 : 0.0552    ndcg@20 : 0.0655    ndcg@50 : 0.0797    
+Wed 02 Apr 2025 16:33:25 INFO  [1;32mepoch 7 training[0m [[1;34mtime[0m: 8.71s, [1;34mtrain loss[0m: 1512.1271]
+Wed 02 Apr 2025 16:33:27 INFO  [1;32mepoch 7 evaluating[0m [[1;34mtime[0m: 1.78s, [1;34mvalid_score[0m: 0.040300]
+Wed 02 Apr 2025 16:33:27 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0698    recall@10 : 0.1023    recall@20 : 0.1434    recall@50 : 0.215    mrr@5 : 0.036    mrr@10 : 0.0403    mrr@20 : 0.0431    mrr@50 : 0.0454    ndcg@5 : 0.0444    ndcg@10 : 0.0548    ndcg@20 : 0.0652    ndcg@50 : 0.0793    
+Wed 02 Apr 2025 16:33:35 INFO  [1;32mepoch 8 training[0m [[1;34mtime[0m: 8.22s, [1;34mtrain loss[0m: 1510.5449]
+Wed 02 Apr 2025 16:33:37 INFO  [1;32mepoch 8 evaluating[0m [[1;34mtime[0m: 2.01s, [1;34mvalid_score[0m: 0.040700]
+Wed 02 Apr 2025 16:33:37 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0707    recall@10 : 0.1042    recall@20 : 0.1449    recall@50 : 0.2174    mrr@5 : 0.0363    mrr@10 : 0.0407    mrr@20 : 0.0435    mrr@50 : 0.0458    ndcg@5 : 0.0448    ndcg@10 : 0.0556    ndcg@20 : 0.0658    ndcg@50 : 0.0801    
+Wed 02 Apr 2025 16:33:37 INFO  [1;34mSaving current best[0m: ./log/FTragrec/Amazon_Beauty\model.pth
+Wed 02 Apr 2025 16:33:45 INFO  [1;32mepoch 9 training[0m [[1;34mtime[0m: 8.11s, [1;34mtrain loss[0m: 1509.9361]
+Wed 02 Apr 2025 16:33:47 INFO  [1;32mepoch 9 evaluating[0m [[1;34mtime[0m: 1.90s, [1;34mvalid_score[0m: 0.040200]
+Wed 02 Apr 2025 16:33:47 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0711    recall@10 : 0.1034    recall@20 : 0.1439    recall@50 : 0.2169    mrr@5 : 0.0359    mrr@10 : 0.0402    mrr@20 : 0.0429    mrr@50 : 0.0452    ndcg@5 : 0.0446    ndcg@10 : 0.055    ndcg@20 : 0.0651    ndcg@50 : 0.0796    
+Wed 02 Apr 2025 16:33:55 INFO  [1;32mepoch 10 training[0m [[1;34mtime[0m: 7.49s, [1;34mtrain loss[0m: 1509.7187]
+Wed 02 Apr 2025 16:33:56 INFO  [1;32mepoch 10 evaluating[0m [[1;34mtime[0m: 1.79s, [1;34mvalid_score[0m: 0.040600]
+Wed 02 Apr 2025 16:33:56 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0706    recall@10 : 0.1045    recall@20 : 0.1441    recall@50 : 0.2169    mrr@5 : 0.0361    mrr@10 : 0.0406    mrr@20 : 0.0433    mrr@50 : 0.0456    ndcg@5 : 0.0446    ndcg@10 : 0.0556    ndcg@20 : 0.0655    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:34:04 INFO  [1;32mepoch 11 training[0m [[1;34mtime[0m: 7.71s, [1;34mtrain loss[0m: 1509.9412]
+Wed 02 Apr 2025 16:34:06 INFO  [1;32mepoch 11 evaluating[0m [[1;34mtime[0m: 1.74s, [1;34mvalid_score[0m: 0.040600]
+Wed 02 Apr 2025 16:34:06 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0702    recall@10 : 0.1042    recall@20 : 0.1446    recall@50 : 0.2161    mrr@5 : 0.0361    mrr@10 : 0.0406    mrr@20 : 0.0434    mrr@50 : 0.0456    ndcg@5 : 0.0446    ndcg@10 : 0.0555    ndcg@20 : 0.0656    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:34:13 INFO  [1;32mepoch 12 training[0m [[1;34mtime[0m: 7.20s, [1;34mtrain loss[0m: 1508.5418]
+Wed 02 Apr 2025 16:34:15 INFO  [1;32mepoch 12 evaluating[0m [[1;34mtime[0m: 1.86s, [1;34mvalid_score[0m: 0.040600]
+Wed 02 Apr 2025 16:34:15 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0709    recall@10 : 0.1052    recall@20 : 0.1451    recall@50 : 0.2163    mrr@5 : 0.0361    mrr@10 : 0.0406    mrr@20 : 0.0433    mrr@50 : 0.0456    ndcg@5 : 0.0447    ndcg@10 : 0.0557    ndcg@20 : 0.0657    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:34:22 INFO  [1;32mepoch 13 training[0m [[1;34mtime[0m: 7.34s, [1;34mtrain loss[0m: 1509.6705]
+Wed 02 Apr 2025 16:34:24 INFO  [1;32mepoch 13 evaluating[0m [[1;34mtime[0m: 1.84s, [1;34mvalid_score[0m: 0.040500]
+Wed 02 Apr 2025 16:34:24 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0706    recall@10 : 0.1048    recall@20 : 0.1451    recall@50 : 0.2172    mrr@5 : 0.036    mrr@10 : 0.0405    mrr@20 : 0.0433    mrr@50 : 0.0455    ndcg@5 : 0.0445    ndcg@10 : 0.0556    ndcg@20 : 0.0657    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:34:31 INFO  [1;32mepoch 14 training[0m [[1;34mtime[0m: 7.26s, [1;34mtrain loss[0m: 1509.4410]
+Wed 02 Apr 2025 16:34:33 INFO  [1;32mepoch 14 evaluating[0m [[1;34mtime[0m: 1.72s, [1;34mvalid_score[0m: 0.040500]
+Wed 02 Apr 2025 16:34:33 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0704    recall@10 : 0.1041    recall@20 : 0.1449    recall@50 : 0.2169    mrr@5 : 0.036    mrr@10 : 0.0405    mrr@20 : 0.0433    mrr@50 : 0.0456    ndcg@5 : 0.0445    ndcg@10 : 0.0554    ndcg@20 : 0.0657    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:34:40 INFO  [1;32mepoch 15 training[0m [[1;34mtime[0m: 7.21s, [1;34mtrain loss[0m: 1509.7001]
+Wed 02 Apr 2025 16:34:42 INFO  [1;32mepoch 15 evaluating[0m [[1;34mtime[0m: 1.77s, [1;34mvalid_score[0m: 0.040300]
+Wed 02 Apr 2025 16:34:42 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0704    recall@10 : 0.1047    recall@20 : 0.1443    recall@50 : 0.2161    mrr@5 : 0.0358    mrr@10 : 0.0403    mrr@20 : 0.043    mrr@50 : 0.0453    ndcg@5 : 0.0443    ndcg@10 : 0.0554    ndcg@20 : 0.0654    ndcg@50 : 0.0796    
+Wed 02 Apr 2025 16:34:50 INFO  [1;32mepoch 16 training[0m [[1;34mtime[0m: 7.43s, [1;34mtrain loss[0m: 1507.7464]
+Wed 02 Apr 2025 16:34:51 INFO  [1;32mepoch 16 evaluating[0m [[1;34mtime[0m: 1.73s, [1;34mvalid_score[0m: 0.040400]
+Wed 02 Apr 2025 16:34:51 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0705    recall@10 : 0.1037    recall@20 : 0.1446    recall@50 : 0.2169    mrr@5 : 0.036    mrr@10 : 0.0404    mrr@20 : 0.0432    mrr@50 : 0.0454    ndcg@5 : 0.0445    ndcg@10 : 0.0552    ndcg@20 : 0.0655    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:34:59 INFO  [1;32mepoch 17 training[0m [[1;34mtime[0m: 7.67s, [1;34mtrain loss[0m: 1508.0142]
+Wed 02 Apr 2025 16:35:01 INFO  [1;32mepoch 17 evaluating[0m [[1;34mtime[0m: 1.78s, [1;34mvalid_score[0m: 0.040300]
+Wed 02 Apr 2025 16:35:01 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0704    recall@10 : 0.1037    recall@20 : 0.1449    recall@50 : 0.2175    mrr@5 : 0.0359    mrr@10 : 0.0403    mrr@20 : 0.0432    mrr@50 : 0.0454    ndcg@5 : 0.0444    ndcg@10 : 0.0552    ndcg@20 : 0.0655    ndcg@50 : 0.0799    
+Wed 02 Apr 2025 16:35:08 INFO  [1;32mepoch 18 training[0m [[1;34mtime[0m: 7.37s, [1;34mtrain loss[0m: 1507.7722]
+Wed 02 Apr 2025 16:35:10 INFO  [1;32mepoch 18 evaluating[0m [[1;34mtime[0m: 1.72s, [1;34mvalid_score[0m: 0.040300]
+Wed 02 Apr 2025 16:35:10 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0702    recall@10 : 0.1038    recall@20 : 0.1442    recall@50 : 0.2178    mrr@5 : 0.0358    mrr@10 : 0.0403    mrr@20 : 0.043    mrr@50 : 0.0453    ndcg@5 : 0.0443    ndcg@10 : 0.0551    ndcg@20 : 0.0653    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:35:17 INFO  [1;32mepoch 19 training[0m [[1;34mtime[0m: 7.39s, [1;34mtrain loss[0m: 1508.7699]
+Wed 02 Apr 2025 16:35:19 INFO  [1;32mepoch 19 evaluating[0m [[1;34mtime[0m: 1.83s, [1;34mvalid_score[0m: 0.040600]
+Wed 02 Apr 2025 16:35:19 INFO  [1;34mvalid result[0m: 
+recall@5 : 0.0706    recall@10 : 0.105    recall@20 : 0.145    recall@50 : 0.2166    mrr@5 : 0.036    mrr@10 : 0.0406    mrr@20 : 0.0433    mrr@50 : 0.0455    ndcg@5 : 0.0446    ndcg@10 : 0.0556    ndcg@20 : 0.0657    ndcg@50 : 0.0798    
+Wed 02 Apr 2025 16:35:19 INFO  Finished training, best eval result in epoch 8
+Wed 02 Apr 2025 16:35:19 INFO  Loading model structure and parameters from ./log/FTragrec/Amazon_Beauty\model.pth
+Wed 02 Apr 2025 16:35:21 INFO  best valid : {'recall@5': 0.0707, 'recall@10': 0.1042, 'recall@20': 0.1449, 'recall@50': 0.2174, 'mrr@5': 0.0363, 'mrr@10': 0.0407, 'mrr@20': 0.0435, 'mrr@50': 0.0458, 'ndcg@5': 0.0448, 'ndcg@10': 0.0556, 'ndcg@20': 0.0658, 'ndcg@50': 0.0801}
+Wed 02 Apr 2025 16:35:21 INFO  test result: {'recall@5': 0.0532, 'recall@10': 0.0809, 'recall@20': 0.1153, 'recall@50': 0.1767, 'mrr@5': 0.0281, 'mrr@10': 0.0317, 'mrr@20': 0.0341, 'mrr@50': 0.036, 'ndcg@5': 0.0343, 'ndcg@10': 0.0432, 'ndcg@20': 0.0518, 'ndcg@50': 0.064}

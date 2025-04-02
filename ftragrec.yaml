@@ -27,11 +27,11 @@ min_item_inter_num: 5
 epochs: 100
 train_batch_size: 1024
 learner: adam
-learning_rate: 0.001  # 提高学习率，帮助更快收敛
+learning_rate: 0.001  # 适中学习率
 training_neg_sample_num: 0  # CE损失不需要负采样
 eval_step: 1
-stopping_step: 5
-weight_decay: 0.0001  # 添加轻微正则化
+stopping_step: 10  # 适当延长停止步数
+weight_decay: 0.0003  # 适中正则化强度
 
 # 评估参数
 eval_batch_size: 256
@@ -60,18 +60,18 @@ lmd: 0.1
 lmd_sem: 0.1
 
 # 检索参数
-len_lower_bound: -1  # 只使用长度≥5的序列
+len_lower_bound: -1  # 只使用长度≥5的序列作为检索源
 len_upper_bound: -1
-len_bound_reverse: True  # 保留符合条件的序列，而不是排除它们
-nprobe: 8  # 增加探测数量，提高检索质量
-top_k: 8  # 增加检索数量
+len_bound_reverse: False  # 保留符合条件的序列
+nprobe: 10  # 合理的探测数量
+top_k: 5  # 适中的检索数量
 
 # RetrieverEncoder参数
-retriever_layers: 2
-retriever_temperature: 0.2  # 提高温度参数，使概率分布更平滑
-retriever_dropout: 0.3  # 增加dropout，减少过拟合
-retriever_update_interval: 6  # 更频繁地更新FAISS索引
-kl_weight: 0.3  # 增加KL散度损失权重
+retriever_layers: 2  # 保留一层检索器
+retriever_temperature: 0.07  # 适中温度参数
+retriever_dropout: 0.2  # 适中dropout，平衡泛化与保留知识
+retriever_update_interval: 6  # 减少更新频率，保持检索稳定性
+kl_weight: 0.2  # 降低KL散度损失权重但不完全忽略
 
 # 目录设置
 log_root: "./log/"
@@ -80,8 +80,16 @@ data_path: "./recbole/dataset/"
 # 预训练设置
 pretrain: False  # 由命令行参数控制
 
+# 微调检索增强参数 - 关键部分
+alpha: 0.15  # 轻微检索知识混合，保持原始表示为主
+enhanced_rec_weight: 0.8  # 确保增强的推荐损失有足够权重
 
-# retrieval settings for prediction
-use_retrieval_for_predict: True  # 是否在预测时使用检索增强
-predict_retrieval_alpha: 0.3     # 检索增强混合权重
-predict_retrieval_temperature: 0.1  # 注意力温度参数
+# 检索质量控制参数 - 新增
+quality_threshold: 0.6  # 只有当检索质量高于阈值时才使用检索结果
+dynamic_alpha: True  # 动态调整alpha基于检索质量
+warmup_epochs: 3  # 在前几轮不使用检索增强，让模型先稳定
+
+# 预测阶段检索增强参数
+use_retrieval_for_predict: True  # 预测时使用检索增强
+predict_retrieval_alpha: 0.15  # 轻微混合预测时的检索增强
+predict_retrieval_temperature: 0.07  # 注意力温度参数

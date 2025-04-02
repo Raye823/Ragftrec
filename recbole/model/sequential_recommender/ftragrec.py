@@ -412,18 +412,43 @@ class FTragrec(SequentialRecommender):
         
         return retrieval_probs  # [batch_size, 1, topk]
 
-    def compute_recommendation_scores(self, seq_output, retrieved_seqs, retrieved_tars):
-        """计算推荐模型的评分分布 - 在给定输入序列x和检索序列d的情况下的目标概率"""
-        batch_size, n_retrieved = retrieved_tars.size()[:2]
+    def compute_recommendation_scores(self, seq_output, retrieved_seqs, retrieved_tars, pos_items=None):
+        """计算推荐模型的评分分布 - 基于每个检索目标嵌入增强的表示对目标项的预测概率"""
+        batch_size, n_retrieved, hidden_size = retrieved_tars.size()
+        device = seq_output.device
         
-        # 展开序列输出以匹配检索项的数量
-        expanded_seq_output = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)  # [B, n_retrieved, H]
+        # 获取目标项的嵌入向量
+        if pos_items is None:
+            # 如果未提供目标项，则需要从外部获取
+            # 这部分需要在调用函数时传入正确的pos_items
+            raise ValueError("目标物品信息(pos_items)不能为空，需要用于计算推荐分布")
         
-        # 计算每个序列表示与对应检索目标项的点积相似度
-        similarity = torch.sum(expanded_seq_output * retrieved_tars, dim=-1)  # [B, n_retrieved]
+        pos_items_emb = self.item_embedding(pos_items)  # [batch_size, hidden_size]
         
-        # 转换为概率分布
-        recommendation_probs = torch.softmax(similarity, dim=-1)  # [B, n_retrieved]
+        # 初始化保存每个检索结果对应的打分
+        scores_list = []
+        
+        # 对每个检索到的目标嵌入单独处理
+        for i in range(n_retrieved):
+            # 获取当前检索结果的目标嵌入
+            current_tar_emb = retrieved_tars[:, i, :]  # [batch_size, hidden_size]
+            
+            # 将目标嵌入与原始序列表示混合(使用未经过retrieverencoder的原始序列表示)
+            temp_alpha = self.alpha
+            enhanced_seq = (1 - temp_alpha) * seq_output + temp_alpha * current_tar_emb
+            
+            # 计算增强表示与真实目标项的相似度(点积)
+            similarity = torch.sum(enhanced_seq * pos_items_emb, dim=-1)  # [batch_size]
+            
+            # 应用sigmoid函数将相似度转换为概率
+            prob = torch.sigmoid(similarity)
+            scores_list.append(prob)
+        
+        # 将所有检索结果的评分堆叠
+        combined_scores = torch.stack(scores_list, dim=1)  # [batch_size, n_retrieved]
+        
+        # 为每个用户归一化评分为概率分布
+        recommendation_probs = combined_scores / (combined_scores.sum(dim=1, keepdim=True) + 1e-8)
         
         return recommendation_probs
 
@@ -482,7 +507,7 @@ class FTragrec(SequentialRecommender):
             
             # 计算推荐模型的评分分布
             recommendation_probs = self.compute_recommendation_scores(
-                seq_output, retrieved_seqs, retrieved_tars
+                seq_output, retrieved_seqs, retrieved_tars, pos_items
             )
             
             # 计算KL散度损失
@@ -519,7 +544,7 @@ class FTragrec(SequentialRecommender):
                 # 小权重给KL损失以保持检索器和推荐器之间的一致性
                 small_weight = self.kl_small_weight
                 # 使用配置的增强推荐损失权重
-                total_loss = rec_loss + self.enhanced_rec_weight * enhanced_rec_loss + small_weight * kl_loss
+                total_loss = rec_loss + self.enhanced_rec_weight * enhanced_rec_loss + self.kl_weight * kl_loss
             else:
                 # 如果没有检索到足够的序列，只使用原始损失和KL损失
                 total_loss = rec_loss + self.kl_weight * kl_loss
