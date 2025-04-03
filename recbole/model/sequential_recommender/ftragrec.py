@@ -50,11 +50,11 @@ class FTragrec(SequentialRecommender):
         self.topk = config['top_k'] if 'top_k' in config else 5
         
         # RetrieverEncoder相关参数
-        self.retriever_layers = config['retriever_layers'] if 'retriever_layers' in config else 1
+        self.retriever_layers = config['retriever_layers'] if 'retriever_layers' in config else 2
         self.retriever_temperature = config['retriever_temperature'] if 'retriever_temperature' in config else 0.1
         self.retriever_dropout = config['retriever_dropout'] if 'retriever_dropout' in config else 0.1
         self.retriever_update_interval = config['retriever_update_interval'] if 'retriever_update_interval' in config else 5
-        self.kl_weight = config['kl_weight'] if 'kl_weight' in config else 0.1
+        self.kl_weight = config['kl_weight'] if 'kl_weight' in config else 0.05  # 降低KL损失权重，因为现在是双向的
         
         # 训练相关参数
         self.batch_size = config['train_batch_size']
@@ -112,14 +112,17 @@ class FTragrec(SequentialRecommender):
         self.predict_retrieval_alpha = config['predict_retrieval_alpha'] if 'predict_retrieval_alpha' in config else 0.5
         self.predict_retrieval_temperature = config['predict_retrieval_temperature'] if 'predict_retrieval_temperature' in config else 0.1
         
-        # 新增: 从配置中获取混合权重alpha参数，如果不存在则使用默认值0.5
+        # 混合权重alpha参数
         self.alpha = config['alpha'] if 'alpha' in config else 0.5
         
-        # 新增: 从配置中获取KL散度小权重参数，如果不存在则使用默认值0.1
-        self.kl_small_weight = config['kl_small_weight'] if 'kl_small_weight' in config else 0.1
-        
-        # 新增: 从配置中获取增强推荐损失权重参数，如果不存在则使用默认值1.0
-        self.enhanced_rec_weight = config['enhanced_rec_weight'] if 'enhanced_rec_weight' in config else 1.0
+        # 增强推荐损失权重参数
+        self.enhanced_rec_weight = config['enhanced_rec_weight'] if 'enhanced_rec_weight' in config else 0.8
+
+        # 统计模型参数量
+        total_params = sum(p.numel() for p in self.parameters())
+        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        print(f'\nFTragrec模型总参数量: {total_params:,}')
+        print(f'可训练参数量: {trainable_params:,}')
         
     def _init_weights(self, module):
         """ 初始化权重 """
@@ -453,17 +456,33 @@ class FTragrec(SequentialRecommender):
         return recommendation_probs
 
     def compute_kl_loss(self, retrieval_probs, recommendation_probs):
-        """计算检索分布与推荐分布之间的KL散度损失"""
-        # 避免数值问题
+        """计算JS散度损失（双向KL散度的平均）
+        
+        Args:
+            retrieval_probs: 检索分布 [batch_size, n_retrieved]
+            recommendation_probs: 推荐分布 [batch_size, n_retrieved]
+        
+        Returns:
+            js_div: JS散度损失
+        """
+        # 数值稳定性
         epsilon = 1e-8
         retrieval_probs = retrieval_probs + epsilon
         recommendation_probs = recommendation_probs + epsilon
         
-        # KL散度计算: KL(retrieval_probs || recommendation_probs)
-        # 优化检索分布使其接近推荐分布
-        kl_div = torch.sum(retrieval_probs * torch.log(retrieval_probs / recommendation_probs), dim=-1)
+        # 计算平均分布
+        mean_probs = 0.5 * (retrieval_probs + recommendation_probs)
         
-        return kl_div.mean()
+        # KL(retrieval||mean)
+        kl_retrieval = torch.sum(retrieval_probs * torch.log(retrieval_probs / mean_probs), dim=-1)
+        
+        # KL(recommendation||mean)
+        kl_recommendation = torch.sum(recommendation_probs * torch.log(recommendation_probs / mean_probs), dim=-1)
+        
+        # JS散度 = 0.5 * (KL(P||M) + KL(Q||M))
+        js_div = 0.5 * (kl_retrieval + kl_recommendation)
+        
+        return js_div.mean()
 
     def calculate_loss(self, interaction):
         """计算模型损失"""
@@ -497,31 +516,30 @@ class FTragrec(SequentialRecommender):
                 seq_output, batch_user_id, batch_seq_len, topk=self.topk
             )
             
-            # 使用检索器编码器处理序列表示
-            retriever_output = self.retriever_forward(seq_output)
-            
-            # 计算检索似然分布
-            retrieval_probs = self.compute_retrieval_scores(
-                retriever_output.unsqueeze(1), retrieved_seqs
-            )
-            
-            # 计算推荐模型的评分分布
-            recommendation_probs = self.compute_recommendation_scores(
-                seq_output, retrieved_seqs, retrieved_tars, pos_items
-            )
-            
-            # 计算KL散度损失
-            kl_loss = self.compute_kl_loss(retrieval_probs.squeeze(1), recommendation_probs)
-            
-            # 新增: 使用检索增强表示计算额外的推荐损失，直接优化推荐质量
             if retrieved_seqs.size(0) > 0:
                 batch_size, n_retrieved, dim = retrieved_seqs.size()
+                
+                # 使用检索器编码器处理序列表示
+                retriever_output = self.retriever_forward(seq_output)
+                
+                # 计算检索似然分布
+                retrieval_probs = self.compute_retrieval_scores(
+                    retriever_output.unsqueeze(1), retrieved_seqs
+                ).squeeze(1)
+                
+                # 计算推荐模型的评分分布
+                recommendation_probs = self.compute_recommendation_scores(
+                    seq_output, retrieved_seqs, retrieved_tars, pos_items
+                )
+                
+                # 计算JS散度损失
+                js_loss = self.compute_kl_loss(retrieval_probs, recommendation_probs)
                 
                 # 扩展查询表示以匹配检索结果维度
                 expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
                 
                 # 计算相似度作为注意力分数
-                attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.retriever_temperature
+                attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
                 attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
                 
                 # 加权汇总检索到的目标表示
@@ -529,8 +547,7 @@ class FTragrec(SequentialRecommender):
                 retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
                 
                 # 混合原始序列表示和检索增强表示
-                alpha = self.alpha  # 使用混合权重参数
-                enhanced_seq_output = (1 - alpha) * seq_output + alpha * retrieved_knowledge
+                enhanced_seq_output = (1 - self.alpha) * seq_output + self.alpha * retrieved_knowledge
                 
                 # 使用增强表示计算额外的推荐损失
                 if self.loss_type == 'BPR':
@@ -541,20 +558,25 @@ class FTragrec(SequentialRecommender):
                     enhanced_logits = torch.matmul(enhanced_seq_output, test_item_emb.transpose(0, 1))
                     enhanced_rec_loss = self.loss_fct(enhanced_logits, pos_items)
                 
-                # 小权重给KL损失以保持检索器和推荐器之间的一致性
-                small_weight = self.kl_small_weight
-                # 使用配置的增强推荐损失权重
-                total_loss = rec_loss + self.enhanced_rec_weight * enhanced_rec_loss + self.kl_weight * kl_loss
+                # 记录各部分损失
+                if hasattr(self, 'logger'):
+                    self.logger.debug(f"JS Loss: {js_loss.item():.4f}")
+                    self.logger.debug(f"Enhanced Rec Loss: {enhanced_rec_loss.item():.4f}")
+                    self.logger.debug(f"Base Rec Loss: {rec_loss.item():.4f}")
+                    
+                    # 记录分布差异
+                    with torch.no_grad():
+                        dist_diff = torch.mean(torch.abs(retrieval_probs - recommendation_probs))
+                        self.logger.debug(f"Distribution Difference: {dist_diff.item():.4f}")
+                
+                # 总损失
+                total_loss =  self.enhanced_rec_weight * enhanced_rec_loss + self.kl_weight * js_loss
             else:
-                # 如果没有检索到足够的序列，只使用原始损失和KL损失
-                total_loss = rec_loss + self.kl_weight * kl_loss
-            
-            # 更新FAISS索引
-            self.current_epoch += 1
-            if self.current_epoch % self.retriever_update_interval == 0:
-                # 在训练循环中更新FAISS索引
-                # 实际更新会在外部trainer中处理
-                pass
+                # 如果没有检索到足够的序列，只使用原始损失和JS损失
+                total_loss = rec_loss
+                
+                if hasattr(self, 'logger'):
+                    self.logger.warning("No sequences retrieved in this batch")
             
             return total_loss
         else:
@@ -592,7 +614,7 @@ class FTragrec(SequentialRecommender):
                     expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
                     
                     # 计算相似度作为注意力分数
-                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.retriever_temperature
+                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
                     attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
                     
                     # 加权汇总检索到的目标表示
@@ -649,7 +671,7 @@ class FTragrec(SequentialRecommender):
                     expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
                     
                     # 计算相似度作为注意力分数
-                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.retriever_temperature
+                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
                     attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
                     
                     # 加权汇总检索到的目标表示
