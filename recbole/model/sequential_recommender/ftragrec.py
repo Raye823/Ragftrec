@@ -14,9 +14,99 @@ import torch, heapq, scipy, faiss, random, math
 from faiss import normalize_L2
 from torch import nn
 import numpy as np
+import torch.nn.functional as F
 from recbole.model.abstract_recommender import SequentialRecommender
 from recbole.model.layers import TransformerEncoder, FeedForward, activation_layer, MLPLayers
 from recbole.model.loss import BPRLoss
+
+
+class SpecializedViewEncoder(nn.Module):
+    """不同视角的编码器实现"""
+    def __init__(self, hidden_size, view_type="global", dropout_prob=0.1):
+        super(SpecializedViewEncoder, self).__init__()
+        self.view_type = view_type
+        
+        if view_type == "global":
+            # 全局视角：通过更大的转换层来捕获全局信息
+            self.encoder = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size * 2),
+                nn.LayerNorm(hidden_size * 2),
+                nn.GELU(),
+                nn.Dropout(dropout_prob),
+                nn.Linear(hidden_size * 2, hidden_size)
+            )
+        elif view_type == "local":
+            # 局部视角：更紧凑的表示，关注最近行为
+            self.encoder = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size),
+                nn.LayerNorm(hidden_size),
+                nn.ReLU(),
+                nn.Dropout(dropout_prob),
+                nn.Linear(hidden_size, hidden_size)
+            )
+        elif view_type == "semantic":
+            # 语义视角：强调语义信息，使用不同的激活函数
+            self.encoder = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size),
+                nn.LayerNorm(hidden_size),
+                nn.Tanh(),
+                nn.Dropout(dropout_prob),
+                nn.Linear(hidden_size, hidden_size)
+            )
+        else:
+            # 默认视角
+            self.encoder = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size),
+                nn.LayerNorm(hidden_size),
+                nn.GELU(),
+                nn.Dropout(dropout_prob),
+                nn.Linear(hidden_size, hidden_size)
+            )
+            
+        # 添加最终的层归一化
+        self.layer_norm = nn.LayerNorm(hidden_size)
+        
+    def forward(self, x):
+        # 应用特定视角的编码
+        encoded = self.encoder(x)
+        
+        # 残差连接
+        return self.layer_norm(x + encoded)
+
+
+class MultiViewFusion(nn.Module):
+    """多视角融合模块，通过注意力机制融合不同视角的表示"""
+    def __init__(self, hidden_size, num_views=3):
+        super(MultiViewFusion, self).__init__()
+        self.num_views = num_views
+        
+        # 视角注意力计算层
+        self.view_attention = nn.Linear(hidden_size, num_views)
+        self.dropout = nn.Dropout(0.1)
+        self.layer_norm = nn.LayerNorm(hidden_size)
+        
+    def forward(self, view_outputs):
+        """
+        输入: view_outputs - 列表，包含各个视角的输出
+        输出: 融合后的表示
+        """
+        # 获取批次大小和隐藏维度
+        batch_size = view_outputs[0].size(0)
+        hidden_size = view_outputs[0].size(-1)
+        
+        # 堆叠视角输出 [batch_size, num_views, hidden_size]
+        stacked_views = torch.stack(view_outputs, dim=1)
+        
+        # 计算视角注意力 - 使用第一个视角作为查询
+        query = view_outputs[0]
+        view_attention_scores = self.view_attention(query)  # [batch_size, num_views]
+        view_attention_weights = F.softmax(view_attention_scores, dim=-1).unsqueeze(-1)  # [batch_size, num_views, 1]
+        
+        # 注意力加权融合
+        fused_output = torch.sum(stacked_views * view_attention_weights, dim=1)  # [batch_size, hidden_size]
+        
+        # 应用残差连接和层归一化
+        return self.layer_norm(query + self.dropout(fused_output))
 
 
 class FTragrec(SequentialRecommender):
@@ -56,6 +146,12 @@ class FTragrec(SequentialRecommender):
         self.retriever_update_interval = config['retriever_update_interval'] if 'retriever_update_interval' in config else 5
         self.kl_weight = config['kl_weight'] if 'kl_weight' in config else 0.05  # 降低KL损失权重，因为现在是双向的
         
+        # 多视角编码相关参数
+        self.use_multi_view = config['use_multi_view'] if 'use_multi_view' in config else True
+        self.num_views = config['num_views'] if 'num_views' in config else 3
+        self.view_types = config['view_types'] if 'view_types' in config else ['global', 'local', 'semantic']
+        self.view_fusion_method = config['view_fusion_method'] if 'view_fusion_method' in config else 'attention'
+        
         # 训练相关参数
         self.batch_size = config['train_batch_size']
         self.current_epoch = 0
@@ -86,6 +182,19 @@ class FTragrec(SequentialRecommender):
                 self.layer_norm_eps
             ) for _ in range(self.retriever_layers)
         ])
+        
+        # 多视角编码器
+        if self.use_multi_view:
+            # 创建不同视角的编码器
+            self.view_encoders = nn.ModuleList([
+                SpecializedViewEncoder(self.hidden_size, view_type=vt, dropout_prob=self.retriever_dropout)
+                for vt in self.view_types[:self.num_views]
+            ])
+            
+            # 视角融合模块
+            self.view_fusion = MultiViewFusion(self.hidden_size, num_views=self.num_views)
+            
+            print(f"已初始化{self.num_views}个视角: {', '.join(self.view_types[:self.num_views])}")
         
         self.LayerNorm = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
         self.dropout = nn.Dropout(self.hidden_dropout_prob)
@@ -123,6 +232,11 @@ class FTragrec(SequentialRecommender):
         trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f'\nFTragrec模型总参数量: {total_params:,}')
         print(f'可训练参数量: {trainable_params:,}')
+        
+        # 多视角相关
+        if self.use_multi_view:
+            mv_params = sum(p.numel() for p in self.view_encoders.parameters()) + sum(p.numel() for p in self.view_fusion.parameters())
+            print(f'多视角编码参数量: {mv_params:,} ({mv_params/trainable_params*100:.2f}%)')
         
     def _init_weights(self, module):
         """ 初始化权重 """
@@ -171,11 +285,30 @@ class FTragrec(SequentialRecommender):
     def retriever_forward(self, seq_output):
         """检索器编码器前向传播 - 对序列表示进行非线性变换"""
         try:
-            retriever_output = seq_output
-            for layer in self.retriever_encoder_layers:
-                retriever_output = layer(retriever_output)
+            # 如果启用多视角编码
+            if hasattr(self, 'use_multi_view') and self.use_multi_view:
+                # 1. 使用不同视角的编码器处理序列表示
+                view_outputs = []
+                for view_encoder in self.view_encoders:
+                    view_output = view_encoder(seq_output)
+                    view_outputs.append(view_output)
+                
+                # 2. 融合多视角表示
+                retriever_output = self.view_fusion(view_outputs)
+                
+                # 3. 应用基础检索器编码层
+                for layer in self.retriever_encoder_layers:
+                    retriever_output = layer(retriever_output)
+                
+                return retriever_output
             
-            return retriever_output
+            # 传统的单视角处理
+            else:
+                retriever_output = seq_output
+                for layer in self.retriever_encoder_layers:
+                    retriever_output = layer(retriever_output)
+                
+                return retriever_output
             
         except Exception as e:
             print(f"retriever_forward方法出错: {e}")
@@ -192,6 +325,12 @@ class FTragrec(SequentialRecommender):
         seq_emb_knowledge, tar_emb_knowledge, user_id_list = None, None, None
         item_seq_all = None
         item_seq_len_all = None
+        
+        # 打印当前配置
+        multi_view_status = "启用" if (hasattr(self, 'use_multi_view') and self.use_multi_view) else "关闭"
+        print(f"多视角编码状态: {multi_view_status}")
+        if hasattr(self, 'use_multi_view') and self.use_multi_view:
+            print(f"使用视角: {', '.join(self.view_types[:self.num_views])}")
         
         # 遍历数据集中的所有交互
         batch_count = 0
@@ -247,7 +386,7 @@ class FTragrec(SequentialRecommender):
                 # 获取序列表示和目标项表示
                 seq_output = self.forward(item_seq, item_seq_len)
                 
-                # 使用检索器编码器进行非线性变换
+                # 使用检索器编码器进行非线性变换 - 支持多视角
                 try:
                     retriever_output = self.retriever_forward(seq_output)
                 except Exception as e:
@@ -381,6 +520,106 @@ class FTragrec(SequentialRecommender):
         # 使用检索器编码器处理查询
         retriever_queries = self.retriever_forward(queries)
         
+        # 多视角检索增强
+        if hasattr(self, 'use_multi_view') and self.use_multi_view and hasattr(self, 'view_encoders'):
+            try:
+                # 从多个视角进行检索
+                all_retrieved_indices = []
+                all_scores = []
+                
+                # 1. 获取主要视角的检索结果
+                queries_cpu = retriever_queries.detach().cpu().numpy()
+                normalize_L2(queries_cpu)
+                
+                # 使用FAISS索引搜索相似序列
+                D1, I1 = self.seq_emb_index.search(queries_cpu, 3*topk)  # 获取更多候选
+                
+                all_retrieved_indices.append(I1)
+                all_scores.append(D1)
+                
+                # 2. 获取每个视角的编码并分别检索
+                for i, view_encoder in enumerate(self.view_encoders):
+                    # 获取该视角的表示
+                    view_query = view_encoder(queries)
+                    
+                    # 对该视角的表示进行进一步编码
+                    for layer in self.retriever_encoder_layers:
+                        view_query = layer(view_query)
+                    
+                    # 进行检索
+                    view_query_cpu = view_query.detach().cpu().numpy()
+                    normalize_L2(view_query_cpu)
+                    
+                    # 使用FAISS索引搜索相似序列
+                    D_view, I_view = self.seq_emb_index.search(view_query_cpu, 2*topk)
+                    
+                    all_retrieved_indices.append(I_view)
+                    all_scores.append(D_view)
+                
+                # 3. 融合多视角检索结果
+                batch_size = queries.size(0)
+                I1_filtered_multi = []
+                
+                # 对每个用户的结果进行处理
+                for i in range(batch_size):
+                    current_user = batch_user_id[i]
+                    current_length = batch_seq_len[i]
+                    
+                    # 合并不同视角的结果
+                    candidate_indices = {}  # 索引 -> [得分, 视角]
+                    
+                    # 处理每个视角的检索结果
+                    for view_idx, (view_scores, view_indices) in enumerate(zip(all_scores, all_retrieved_indices)):
+                        for rank, (score, idx) in enumerate(zip(view_scores[i], view_indices[i])):
+                            # 过滤自身序列中的未来项
+                            is_valid = (self.user_id_list[idx] != current_user) or \
+                                      (self.user_id_list[idx] == current_user and self.item_seq_len_all[idx] < current_length)
+                            
+                            if is_valid:
+                                # 根据视角和排名调整得分
+                                view_weight = 1.0 if view_idx == 0 else 0.9  # 主视角权重略高
+                                rank_weight = 1.0 / (rank + 1)  # 考虑排名
+                                
+                                adjusted_score = score * view_weight * rank_weight
+                                
+                                if idx in candidate_indices:
+                                    # 取最高得分
+                                    if adjusted_score > candidate_indices[idx][0]:
+                                        candidate_indices[idx] = [adjusted_score, view_idx]
+                                else:
+                                    candidate_indices[idx] = [adjusted_score, view_idx]
+                    
+                    # 根据调整后的得分排序
+                    sorted_candidates = sorted(candidate_indices.items(), 
+                                              key=lambda x: x[1][0], 
+                                              reverse=True)
+                    
+                    # 提取topk个结果
+                    filtered_indices = [idx for idx, _ in sorted_candidates[:topk]]
+                    
+                    # 如果没有足够的结果，填充
+                    while len(filtered_indices) < topk and len(filtered_indices) > 0:
+                        filtered_indices.append(filtered_indices[0])
+                    
+                    I1_filtered_multi.append(filtered_indices[:topk])
+                
+                # 转换为numpy数组
+                I1_filtered = np.array(I1_filtered_multi)
+                
+                if I1_filtered.size == 0:
+                    raise ValueError("过滤后没有有效的检索结果")
+                
+                # 获取检索到的序列和目标项表示
+                retrieval_seq = self.seq_emb_knowledge[I1_filtered]
+                retrieval_tar = self.tar_emb_knowledge[I1_filtered]
+                
+                return torch.tensor(retrieval_seq).to(queries.device), torch.tensor(retrieval_tar).to(queries.device)
+                
+            except Exception as e:
+                print(f"多视角检索失败: {e}，回退到传统检索方法")
+                # 发生错误时使用常规检索
+        
+        # 常规单视角检索（作为后备或不启用多视角时）
         # 将查询转换为CPU张量并进行L2归一化
         queries_cpu = retriever_queries.detach().cpu().numpy()
         normalize_L2(queries_cpu)
@@ -598,8 +837,12 @@ class FTragrec(SequentialRecommender):
                 batch_user_id = list(interaction[self.USER_ID].detach().cpu().numpy())
                 batch_seq_len = list(item_seq_len.detach().cpu().numpy())
                 
-                # 使用检索器编码器处理序列表示
+                # 使用检索器编码器处理序列表示 - 支持多视角
                 retriever_output = self.retriever_forward(seq_output)
+                
+                # 在日志中记录多视角状态
+                if hasattr(self, 'use_multi_view') and self.use_multi_view and hasattr(self, 'logger'):
+                    self.logger.debug("使用多视角检索进行预测")
                 
                 # 检索相似序列和目标项
                 retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
@@ -655,8 +898,12 @@ class FTragrec(SequentialRecommender):
                 batch_user_id = list(interaction[self.USER_ID].detach().cpu().numpy())
                 batch_seq_len = list(item_seq_len.detach().cpu().numpy())
                 
-                # 使用检索器编码器处理序列表示
+                # 使用检索器编码器处理序列表示 - 支持多视角
                 retriever_output = self.retriever_forward(seq_output)
+                
+                # 在日志中记录多视角状态
+                if hasattr(self, 'use_multi_view') and self.use_multi_view and hasattr(self, 'logger'):
+                    self.logger.debug("使用多视角检索进行预测")
                 
                 # 检索相似序列和目标项
                 retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
