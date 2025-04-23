@@ -112,8 +112,12 @@ class FTragrec(SequentialRecommender):
         self.predict_retrieval_alpha = config['predict_retrieval_alpha'] if 'predict_retrieval_alpha' in config else 0.5
         self.predict_retrieval_temperature = config['predict_retrieval_temperature'] if 'predict_retrieval_temperature' in config else 0.1
         
-        # 混合权重alpha参数
+        # 混合权重alpha参数 - 总体混合比例
         self.alpha = config['alpha'] if 'alpha' in config else 0.5
+        
+        # 新增：序列和目标项的混合权重
+        self.seq_alpha = config['seq_alpha'] if 'seq_alpha' in config else 0.7  # 检索序列的混合比例（默认占70%）
+        self.tar_alpha = config['tar_alpha'] if 'tar_alpha' in config else 0.3  # 目标项的混合比例（默认占30%）
         
         # 增强推荐损失权重参数
         self.enhanced_rec_weight = config['enhanced_rec_weight'] if 'enhanced_rec_weight' in config else 0.8
@@ -416,71 +420,68 @@ class FTragrec(SequentialRecommender):
         return retrieval_probs  # [batch_size, 1, topk]
 
     def compute_recommendation_scores(self, seq_output, retrieved_seqs, retrieved_tars, pos_items=None):
-        """计算推荐模型的评分分布 - 基于每个检索目标嵌入增强的表示对目标项的预测概率"""
+        """计算推荐模型的评分分布 - 采用与损失计算一致的加权汇总方式"""
         batch_size, n_retrieved, hidden_size = retrieved_tars.size()
         device = seq_output.device
         
         # 获取目标项的嵌入向量
         if pos_items is None:
-            # 如果未提供目标项，则需要从外部获取
-            # 这部分需要在调用函数时传入正确的pos_items
             raise ValueError("目标物品信息(pos_items)不能为空，需要用于计算推荐分布")
         
         pos_items_emb = self.item_embedding(pos_items)  # [batch_size, hidden_size]
         
-        # 初始化保存每个检索结果对应的打分
-        scores_list = []
+        # 扩展查询表示以匹配检索结果维度
+        expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
         
-        # 对每个检索到的目标嵌入单独处理
-        for i in range(n_retrieved):
-            # 获取当前检索结果的目标嵌入
-            current_tar_emb = retrieved_tars[:, i, :]  # [batch_size, hidden_size]
-            
-            # 将目标嵌入与原始序列表示混合(使用未经过retrieverencoder的原始序列表示)
-            temp_alpha = self.alpha
-            enhanced_seq = (1 - temp_alpha) * seq_output + temp_alpha * current_tar_emb
-            
-            # 计算增强表示与真实目标项的相似度(点积)
-            similarity = torch.sum(enhanced_seq * pos_items_emb, dim=-1)  # [batch_size]
-            
-            # 应用sigmoid函数将相似度转换为概率
-            prob = torch.sigmoid(similarity)
-            scores_list.append(prob)
+        # 计算相似度作为注意力分数
+        attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
+        attention_weights = torch.softmax(attention_scores, dim=-1)  # [batch_size, n_retrieved]
         
-        # 将所有检索结果的评分堆叠
-        combined_scores = torch.stack(scores_list, dim=1)  # [batch_size, n_retrieved]
+        # 以下为了调试方便，确保能看到权重分布
+        if hasattr(self, 'logger') and torch.rand(1).item() < 0.01:  # 1%的批次记录权重
+            max_weights = torch.max(attention_weights, dim=1)[0]
+            min_weights = torch.min(attention_weights, dim=1)[0]
+            mean_weights = torch.mean(attention_weights, dim=1)
+            self.logger.debug(f"Attention weights stats: max={max_weights.mean().item():.4f}, "
+                              f"min={min_weights.mean().item():.4f}, mean={mean_weights.mean().item():.4f}")
         
-        # 为每个用户归一化评分为概率分布
-        recommendation_probs = combined_scores / (combined_scores.sum(dim=1, keepdim=True) + 1e-8)
+        # 使用注意力分布作为推荐概率分布
+        # 这样retrieval_probs和recommendation_probs就有相同的语义：检索序列与查询序列的相似度
+        recommendation_probs = attention_weights
         
         return recommendation_probs
 
     def compute_kl_loss(self, retrieval_probs, recommendation_probs):
-        """计算JS散度损失（双向KL散度的平均）
+        """计算两个概率分布之间的JS散度损失，并增强数值稳定性"""
+        # 数值稳定性 - 使用更大的epsilon
+        epsilon = 1e-5
         
-        Args:
-            retrieval_probs: 检索分布 [batch_size, n_retrieved]
-            recommendation_probs: 推荐分布 [batch_size, n_retrieved]
-        
-        Returns:
-            js_div: JS散度损失
-        """
-        # 数值稳定性
-        epsilon = 1e-8
+        # 确保两个分布是有效的概率分布（和为1）
         retrieval_probs = retrieval_probs + epsilon
         recommendation_probs = recommendation_probs + epsilon
+        
+        # 重新归一化
+        retrieval_probs = retrieval_probs / retrieval_probs.sum(dim=1, keepdim=True)
+        recommendation_probs = recommendation_probs / recommendation_probs.sum(dim=1, keepdim=True)
         
         # 计算平均分布
         mean_probs = 0.5 * (retrieval_probs + recommendation_probs)
         
         # KL(retrieval||mean)
-        kl_retrieval = torch.sum(retrieval_probs * torch.log(retrieval_probs / mean_probs), dim=-1)
+        kl_retrieval = torch.sum(retrieval_probs * torch.log(retrieval_probs / (mean_probs + epsilon) + epsilon), dim=1)
         
         # KL(recommendation||mean)
-        kl_recommendation = torch.sum(recommendation_probs * torch.log(recommendation_probs / mean_probs), dim=-1)
+        kl_recommendation = torch.sum(recommendation_probs * torch.log(recommendation_probs / (mean_probs + epsilon) + epsilon), dim=1)
         
         # JS散度 = 0.5 * (KL(P||M) + KL(Q||M))
         js_div = 0.5 * (kl_retrieval + kl_recommendation)
+                
+        # 记录JS散度值分布（调试用）
+        if hasattr(self, 'logger') and torch.rand(1).item() < 0.05:  # 5%的批次记录
+            self.logger.debug(f"JS散度分布: min={js_div.min().item():.4f}, "
+                             f"max={js_div.max().item():.4f}, "
+                             f"mean={js_div.mean().item():.4f}, "
+                             f"median={js_div.median().item():.4f}")
         
         return js_div.mean()
 
@@ -544,9 +545,17 @@ class FTragrec(SequentialRecommender):
                 
                 # 加权汇总检索到的目标表示
                 retrieved_targets_weighted = retrieved_tars * attention_weights
-                retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                retrieved_knowledge_tar = torch.sum(retrieved_targets_weighted, dim=1)
                 
-                # 混合原始序列表示和检索增强表示
+                # 加权汇总检索到的序列表示
+                retrieved_seqs_weighted = retrieved_seqs * attention_weights
+                retrieved_knowledge_seq = torch.sum(retrieved_seqs_weighted, dim=1)
+                
+                # 混合原始序列表示、检索序列表示和检索目标表示
+                # 先根据seq_alpha和tar_alpha混合检索序列和目标项
+                retrieved_knowledge = self.seq_alpha * retrieved_knowledge_seq + self.tar_alpha * retrieved_knowledge_tar
+                
+                # 再根据总体alpha混合原始和检索知识
                 enhanced_seq_output = (1 - self.alpha) * seq_output + self.alpha * retrieved_knowledge
                 
                 # 使用增强表示计算额外的推荐损失
@@ -568,6 +577,16 @@ class FTragrec(SequentialRecommender):
                     with torch.no_grad():
                         dist_diff = torch.mean(torch.abs(retrieval_probs - recommendation_probs))
                         self.logger.debug(f"Distribution Difference: {dist_diff.item():.4f}")
+                        
+                        # 记录混合比例
+                        self.logger.debug(f"混合比例 - 总体alpha: {self.alpha:.4f}, "
+                                         f"序列alpha: {self.seq_alpha:.4f}, "
+                                         f"目标项alpha: {self.tar_alpha:.4f}")
+                        
+                        # 记录表征相似度
+                        seq_sim = torch.nn.functional.cosine_similarity(seq_output, retrieved_knowledge_seq, dim=1).mean()
+                        tar_sim = torch.nn.functional.cosine_similarity(seq_output, retrieved_knowledge_tar, dim=1).mean()
+                        self.logger.debug(f"表征相似度 - 序列: {seq_sim.item():.4f}, 目标项: {tar_sim.item():.4f}")
                 
                 # 总损失
                 total_loss =  self.enhanced_rec_weight * enhanced_rec_loss + self.kl_weight * js_loss
@@ -619,11 +638,18 @@ class FTragrec(SequentialRecommender):
                     
                     # 加权汇总检索到的目标表示
                     retrieved_targets_weighted = retrieved_tars * attention_weights
-                    retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                    retrieved_knowledge_tar = torch.sum(retrieved_targets_weighted, dim=1)
                     
-                    # 混合原始序列表示和检索增强表示
-                    alpha = self.alpha  # 使用混合权重参数
-                    enhanced_seq_output = (1 - alpha) * seq_output + alpha * retrieved_knowledge
+                    # 加权汇总检索到的序列表示
+                    retrieved_seqs_weighted = retrieved_seqs * attention_weights
+                    retrieved_knowledge_seq = torch.sum(retrieved_seqs_weighted, dim=1)
+                    
+                    # 混合原始序列表示、检索序列表示和检索目标表示
+                    # 先根据seq_alpha和tar_alpha混合检索序列和目标项
+                    retrieved_knowledge = self.seq_alpha * retrieved_knowledge_seq + self.tar_alpha * retrieved_knowledge_tar
+                    
+                    # 再根据总体alpha混合原始和检索知识
+                    enhanced_seq_output = (1 - self.alpha) * seq_output + self.alpha * retrieved_knowledge
                     
                     # 使用增强后的表示计算分数
                     test_items_emb = self.item_embedding.weight
@@ -676,11 +702,18 @@ class FTragrec(SequentialRecommender):
                     
                     # 加权汇总检索到的目标表示
                     retrieved_targets_weighted = retrieved_tars * attention_weights
-                    retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                    retrieved_knowledge_tar = torch.sum(retrieved_targets_weighted, dim=1)
                     
-                    # 混合原始序列表示和检索增强表示
-                    alpha = self.alpha  # 使用混合权重参数
-                    enhanced_seq_output = (1 - alpha) * seq_output + alpha * retrieved_knowledge
+                    # 加权汇总检索到的序列表示
+                    retrieved_seqs_weighted = retrieved_seqs * attention_weights
+                    retrieved_knowledge_seq = torch.sum(retrieved_seqs_weighted, dim=1)
+                    
+                    # 混合原始序列表示、检索序列表示和检索目标表示
+                    # 先根据seq_alpha和tar_alpha混合检索序列和目标项
+                    retrieved_knowledge = self.seq_alpha * retrieved_knowledge_seq + self.tar_alpha * retrieved_knowledge_tar
+                    
+                    # 再根据总体alpha混合原始和检索知识
+                    enhanced_seq_output = (1 - self.alpha) * seq_output + self.alpha * retrieved_knowledge
                     
                     # 使用增强后的表示计算分数
                     test_item_emb = self.item_embedding(test_item)
