@@ -44,40 +44,36 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
     # 模型初始化
     ftragrec = FTragrec(config, train_data.dataset).to(config['device'])
     
+    # 初始化可微分记忆模块（如果启用）
+    if 'use_diff_memory' in config and config['use_diff_memory']:
+        memory_size = 4096
+        if 'memory_size' in config:
+            memory_size = config['memory_size']
+        print(f"初始化可微分记忆模块，大小：{memory_size}")
+    
     # 加载DuoRec预训练权重
     if duorec_model_path is not None and os.path.exists(duorec_model_path):
-        print(f"Loading pretrained DuoRec weights from {duorec_model_path}")
+        print(f"从{duorec_model_path}加载DuoRec预训练权重")
         
         # 加载DuoRec模型权重
         try:
             checkpoint = torch.load(duorec_model_path, map_location=config['device'])
-            print(f"成功加载预训练模型文件，检查点类型: {type(checkpoint)}")
             
             if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
                 duorec_state_dict = checkpoint['state_dict']
-                print(f"从检查点中获取state_dict，包含 {len(duorec_state_dict)} 个参数")
             else:
                 duorec_state_dict = checkpoint
-                print(f"直接使用检查点作为state_dict，包含 {len(duorec_state_dict) if isinstance(checkpoint, dict) else '未知数量'} 个参数")
                 
-            # 打印预训练模型的关键参数信息
-            for key in list(duorec_state_dict.keys())[:5]:  # 只打印前5个键作为示例
-                print(f"预训练参数示例: {key}, 形状: {duorec_state_dict[key].shape if isinstance(duorec_state_dict[key], torch.Tensor) else '非张量'}")
-            
             # 检查FTragrec模型的参数
             ftragrec_keys = set(ftragrec.state_dict().keys())
-            print(f"FTragrec模型包含 {len(ftragrec_keys)} 个参数")
             
             # 找出共享的参数键
             duorec_keys = set(duorec_state_dict.keys())
             shared_keys = ftragrec_keys.intersection(duorec_keys)
-            print(f"找到 {len(shared_keys)} 个共享参数")
+            print(f"找到{len(shared_keys)}个共享参数")
             
             # 直接加载整个模型
             missing_keys, unexpected_keys = ftragrec.load_state_dict(duorec_state_dict, strict=False)
-            print(f"直接加载结果: {len(missing_keys)}个缺失键, {len(unexpected_keys)}个意外键")
-            print(f"缺失的键示例: {missing_keys[:5] if missing_keys else '无'}")
-            print(f"意外的键示例: {unexpected_keys[:5] if unexpected_keys else '无'}")
             
             # 仅冻结已加载的参数
             frozen_count = 0
@@ -87,42 +83,15 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
                 if name in shared_keys:
                     param.requires_grad = False
                     frozen_count += 1
-                    print(f"冻结参数: {name}")
                 elif 'retriever_encoder_layers' in name:
                     param.requires_grad = True
                     trainable_count += 1
-                    print(f"可训练参数: {name}")
             
-            print(f"冻结了 {frozen_count} 个参数，保留 {trainable_count} 个可训练参数")
-            print("DuoRec weights loaded successfully!")
-            
-            # 预缓存知识前先进行初始评估
-            print("执行初始评估以验证模型加载效果...")
-            # 创建临时评估器进行初始评估
-            temp_trainer = Trainer(config, ftragrec)
-            with torch.no_grad():
-                # 确保模型处于评估模式
-                ftragrec.eval()
-                initial_valid_result = temp_trainer.evaluate(valid_data, load_best_model=False, show_progress=config['show_progress'])
-                
-                # 打印初始评估结果
-                print(f"加载预训练模型后的初始评估结果: {initial_valid_result}")
-                print(f"特别关注 ndcg@5: {initial_valid_result.get('ndcg@5', 'N/A')}")
-                logger = getLogger()
-                logger.info(set_color('Initial evaluation after loading pretrained model:', 'blue') + 
-                           f' ndcg@5: {initial_valid_result.get("ndcg@5", "N/A")}')
-                logger.info(f"Complete initial evaluation results: {initial_valid_result}")
-                
-                # 如果初始结果很低，可能是模型参数没有正确加载
-                if 'ndcg@5' in initial_valid_result and initial_valid_result['ndcg@5'] < 0.01:
-                    print(set_color("警告: 初始评估结果非常低！预训练参数可能未正确加载", 'red'))
-                    logger.warning("Initial evaluation results are very low. Pretrained weights might not be correctly applied.")
-            
-            # 初始评估完成后开始预缓存知识
-            print("开始预缓存知识...")
+            print(f"已冻结{frozen_count}个参数，保留{trainable_count}个可训练参数")
+            print("DuoRec权重加载成功")
             
             # 预缓存知识
-            print("Precaching knowledge for FAISS index...")
+            print("开始预缓存知识...")
             ftragrec.precached_knowledge(train_data)
             
         except Exception as e:
@@ -130,10 +99,10 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
             import traceback
             traceback.print_exc()
     else:
-        print("No pretrained DuoRec weights found or path not provided. Training from scratch.")
+        print("未找到DuoRec预训练权重或未提供路径，从头开始训练")
         
         # 预缓存知识
-        print("Precaching knowledge for FAISS index...")
+        print("开始为FAISS索引预缓存知识...")
         ftragrec.precached_knowledge(train_data)
     
     # 创建自定义Trainer
@@ -148,11 +117,49 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
             # 调用父类方法进行训练
             result = super()._train_epoch(train_data, epoch_idx, loss_func, show_progress)
             
-            # 检查是否需要更新FAISS索引
+            # 检查是否需要更新记忆模块索引
             if (epoch_idx + 1) % self.model.retriever_update_interval == 0:
-                print(f"Epoch {epoch_idx + 1}: Updating FAISS index...")
-                self.model.update_faiss_index()
-                
+                print(f"Epoch {epoch_idx + 1}: 更新记忆模块索引...")
+                self.model.update_memory_index()
+            
+            # 每个epoch结束后更新记忆模块（如果启用）
+            if hasattr(self.model, 'use_diff_memory') and self.model.use_diff_memory:
+                try:
+                    # 随机抽取一部分训练数据用于更新记忆模块
+                    update_samples = []
+                    memory_update_size = min(500, len(train_data))
+                    
+                    print(f"Epoch {epoch_idx + 1}: 使用{memory_update_size}个样本更新记忆模块...")
+                    
+                    # 从训练数据中收集批次
+                    for batch_idx, interaction in enumerate(train_data):
+                        if batch_idx * train_data.batch_size >= memory_update_size:
+                            break
+                        update_samples.append(interaction)
+                    
+                    # 处理收集到的批次
+                    for interaction in update_samples:
+                        # 获取批次数据
+                        interaction = interaction.to(self.device)
+                        item_seq = interaction[self.model.ITEM_SEQ]
+                        item_seq_len = interaction[self.model.ITEM_SEQ_LEN]
+                        pos_items = interaction[self.model.POS_ITEM_ID]
+                        
+                        # 计算序列表示
+                        with torch.no_grad():
+                            seq_output = self.model.forward(item_seq, item_seq_len)
+                            pos_items_emb = self.model.item_embedding(pos_items)
+                        
+                        # 更新记忆模块，传入用户ID和序列长度
+                        self.model.update_memory(
+                            seq_output, 
+                            pos_items_emb,
+                            user_ids=interaction[self.model.USER_ID],
+                            seq_lens=interaction[self.model.ITEM_SEQ_LEN]
+                        )
+                except Exception as e:
+                    print(f"记忆模块更新出错: {e}")
+            
             return result
     
     # 使用自定义Trainer
