@@ -108,8 +108,12 @@ def activation_layer(activation_name='relu', emb_dim=None):
             activation = nn.LeakyReLU()
         elif activation_name.lower() == 'dice':
             activation = Dice(emb_dim)
+        elif activation_name.lower() == 'gelu':
+            activation = nn.GELU()
         elif activation_name.lower() == 'none':
             activation = None
+        else:
+            raise NotImplementedError("activation function {} is not implemented".format(activation_name))
     elif issubclass(activation_name, nn.Module):
         activation = activation_name()
     else:

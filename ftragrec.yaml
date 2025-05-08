@@ -33,7 +33,7 @@ min_item_inter_num: 5    # 物品最少交互次数
 # ======================================
 # 训练参数
 # ======================================
-epochs: 10              # 训练轮数
+epochs: 2              # 训练轮数
 train_batch_size: 1024   # 训练批次大小
 learner: adam            # 优化器
 learning_rate: 0.001     # 学习率
@@ -48,7 +48,7 @@ weight_decay: 0.0003     # L2正则化强度
 eval_batch_size: 256     # 评估批次大小
 topk: [5, 10, 20, 50]    # 评估的K值列表
 metrics: ['Recall', 'NDCG']  # 评估指标
-valid_metric: NDCG@10     # 用于早停的验证指标
+valid_metric: Recall@10     # 用于早停的验证指标
 eval_setting: TO_LS,full # 按时间排序，留一法划分，全排序
 
 # ======================================
@@ -81,15 +81,23 @@ lmd_sem: 0.1             # 语义lambda参数
 len_lower_bound: -1      # 序列长度下限（-1表示不限制）
 len_upper_bound: -1      # 序列长度上限（-1表示不限制）
 len_bound_reverse: False # 反向边界（False表示保留符合条件的序列）
-nprobe: 1               # FAISS探测数量
+nprobe: 16               # FAISS探测数量
 top_k: 10                 # 检索的序列数量
 
+# ======================================
 # 检索器编码器参数
-retriever_layers: 1      # 检索器层数
-retriever_temperature: 0.07  # 检索温度参数
+# ======================================
+# 基础参数
+retriever_layers: 2      # 检索器层数
+retriever_temperature: 0.01  # 检索温度参数
 retriever_dropout: 0.5   # 检索器dropout
-retriever_update_interval: 11 # 检索器更新间隔
-kl_weight: 0          # KL散度损失权重 (设为大于0的值以启用JS散度优化)
+retriever_update_interval: 1 # 检索器更新间隔
+kl_weight: 1          # KL散度损失权重
+
+# 增强检索器网络参数
+retriever_inner_size: 256  # 检索器前馈网络内部大小，与主模型保持一致
+retriever_layer_norm_eps: 1e-12  # 检索器层归一化参数
+retriever_act: 'relu'      # 检索器激活函数
 
 # ======================================
 # 路径和预训练设置
@@ -103,17 +111,9 @@ pretrain: False          # 是否使用预训练
 # ======================================
 # 混合策略参数
 alpha: 0.15              # 检索知识混合比例（15%检索知识）
-enhanced_rec_weight: 0 # 增强推荐损失权重
+enhanced_rec_weight: 1 # 增强推荐损失权重
 
 # 预测阶段检索增强
 use_retrieval_for_predict: True  # 预测时是否使用检索增强
 predict_retrieval_alpha: 0.15    # 预测时的检索增强混合比例
-predict_retrieval_temperature: 0.07  # 预测时的注意力温度参数
-
-# ======================================
-# 可微分记忆模块参数
-# ======================================
-use_diff_memory: True     # 是否启用可微分记忆模块
-memory_size: 2048         # 记忆库大小
-memory_weight: 1        # 记忆模块损失权重
-diff_temperature: 0.05    # 记忆检索温度参数
+predict_retrieval_temperature: 0.01  # 预测时的注意力温度参数

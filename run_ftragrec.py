@@ -37,6 +37,17 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
     init_seed(config['seed'], config['reproducibility'])
     init_logger(config)
     
+    # 记录检索器参数配置
+    logger = getLogger()
+    logger.info("检索器编码器配置:")
+    logger.info(f"  - 层数: {config['retriever_layers'] if 'retriever_layers' in config else 2}")
+    logger.info(f"  - 内部大小: {config['retriever_inner_size'] if 'retriever_inner_size' in config else config['inner_size']}")
+    logger.info(f"  - 激活函数: {config['retriever_act'] if 'retriever_act' in config else config['hidden_act']}")
+    logger.info(f"  - Dropout: {config['retriever_dropout'] if 'retriever_dropout' in config else 0.1}")
+    logger.info(f"  - 层归一化参数: {config['retriever_layer_norm_eps'] if 'retriever_layer_norm_eps' in config else config['layer_norm_eps']}")
+    logger.info(f"  - 温度参数: {config['retriever_temperature'] if 'retriever_temperature' in config else 0.1}")
+    logger.info(f"  - KL损失权重: {config['kl_weight'] if 'kl_weight' in config else 0.05}")
+    
     # 数据集准备
     dataset = create_dataset(config)
     train_data, valid_data, test_data = data_preparation(config, dataset)
@@ -44,36 +55,40 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
     # 模型初始化
     ftragrec = FTragrec(config, train_data.dataset).to(config['device'])
     
-    # 初始化可微分记忆模块（如果启用）
-    if 'use_diff_memory' in config and config['use_diff_memory']:
-        memory_size = 4096
-        if 'memory_size' in config:
-            memory_size = config['memory_size']
-        print(f"初始化可微分记忆模块，大小：{memory_size}")
-    
     # 加载DuoRec预训练权重
     if duorec_model_path is not None and os.path.exists(duorec_model_path):
-        print(f"从{duorec_model_path}加载DuoRec预训练权重")
+        print(f"Loading pretrained DuoRec weights from {duorec_model_path}")
         
         # 加载DuoRec模型权重
         try:
             checkpoint = torch.load(duorec_model_path, map_location=config['device'])
+            print(f"成功加载预训练模型文件，检查点类型: {type(checkpoint)}")
             
             if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
                 duorec_state_dict = checkpoint['state_dict']
+                print(f"从检查点中获取state_dict，包含 {len(duorec_state_dict)} 个参数")
             else:
                 duorec_state_dict = checkpoint
+                print(f"直接使用检查点作为state_dict，包含 {len(duorec_state_dict) if isinstance(checkpoint, dict) else '未知数量'} 个参数")
                 
+            # 打印预训练模型的关键参数信息
+            for key in list(duorec_state_dict.keys())[:5]:  # 只打印前5个键作为示例
+                print(f"预训练参数示例: {key}, 形状: {duorec_state_dict[key].shape if isinstance(duorec_state_dict[key], torch.Tensor) else '非张量'}")
+            
             # 检查FTragrec模型的参数
             ftragrec_keys = set(ftragrec.state_dict().keys())
+            print(f"FTragrec模型包含 {len(ftragrec_keys)} 个参数")
             
             # 找出共享的参数键
             duorec_keys = set(duorec_state_dict.keys())
             shared_keys = ftragrec_keys.intersection(duorec_keys)
-            print(f"找到{len(shared_keys)}个共享参数")
+            print(f"找到 {len(shared_keys)} 个共享参数")
             
             # 直接加载整个模型
             missing_keys, unexpected_keys = ftragrec.load_state_dict(duorec_state_dict, strict=False)
+            print(f"直接加载结果: {len(missing_keys)}个缺失键, {len(unexpected_keys)}个意外键")
+            print(f"缺失的键示例: {missing_keys[:5] if missing_keys else '无'}")
+            print(f"意外的键示例: {unexpected_keys[:5] if unexpected_keys else '无'}")
             
             # 仅冻结已加载的参数
             frozen_count = 0
@@ -83,15 +98,21 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
                 if name in shared_keys:
                     param.requires_grad = False
                     frozen_count += 1
-                elif 'retriever_encoder_layers' in name:
+                    print(f"冻结参数: {name}")
+                elif 'retriever_encoder' in name:
                     param.requires_grad = True
                     trainable_count += 1
+                    print(f"可训练参数: {name}")
             
-            print(f"已冻结{frozen_count}个参数，保留{trainable_count}个可训练参数")
-            print("DuoRec权重加载成功")
+            print(f"冻结了 {frozen_count} 个参数，保留 {trainable_count} 个可训练参数")
+            print("DuoRec weights loaded successfully!")
+            
+           
+            # 初始评估完成后开始预缓存知识
+            print("开始预缓存知识...")
             
             # 预缓存知识
-            print("开始预缓存知识...")
+            print("Precaching knowledge for FAISS index...")
             ftragrec.precached_knowledge(train_data)
             
         except Exception as e:
@@ -99,10 +120,10 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
             import traceback
             traceback.print_exc()
     else:
-        print("未找到DuoRec预训练权重或未提供路径，从头开始训练")
+        print("No pretrained DuoRec weights found or path not provided. Training from scratch.")
         
         # 预缓存知识
-        print("开始为FAISS索引预缓存知识...")
+        print("Precaching knowledge for FAISS index...")
         ftragrec.precached_knowledge(train_data)
     
     # 创建自定义Trainer
@@ -113,53 +134,35 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
             # 确保模型保存在日志目录中
             self.saved_model_file = os.path.join(config['log_dir'], 'model.pth')
             
+            # 记录检索器更新间隔
+            self.retriever_update_interval = self.model.retriever_update_interval
+            self.logger.info(f"检索器更新间隔: 每 {self.retriever_update_interval} 个epoch更新一次FAISS索引")
+            
         def _train_epoch(self, train_data, epoch_idx, loss_func=None, show_progress=False):
             # 调用父类方法进行训练
             result = super()._train_epoch(train_data, epoch_idx, loss_func, show_progress)
             
-            # 检查是否需要更新记忆模块索引
-            if (epoch_idx + 1) % self.model.retriever_update_interval == 0:
-                print(f"Epoch {epoch_idx + 1}: 更新记忆模块索引...")
-                self.model.update_memory_index()
+            # 检查是否需要更新FAISS索引
+            if (epoch_idx + 1) % self.retriever_update_interval == 0:
+                self.logger.info(f"Epoch {epoch_idx + 1}: 更新FAISS索引...")
+                self.model.update_faiss_index(train_data)
+                
+                # 在索引更新后分析分布差异
+                if hasattr(self.model, 'summarize_distribution_analysis'):
+                    self.logger.info("分析检索器与推荐器分布差异...")
+                    self.model.summarize_distribution_analysis()
             
-            # 每个epoch结束后更新记忆模块（如果启用）
-            if hasattr(self.model, 'use_diff_memory') and self.model.use_diff_memory:
-                try:
-                    # 随机抽取一部分训练数据用于更新记忆模块
-                    update_samples = []
-                    memory_update_size = min(500, len(train_data))
-                    
-                    print(f"Epoch {epoch_idx + 1}: 使用{memory_update_size}个样本更新记忆模块...")
-                    
-                    # 从训练数据中收集批次
-                    for batch_idx, interaction in enumerate(train_data):
-                        if batch_idx * train_data.batch_size >= memory_update_size:
-                            break
-                        update_samples.append(interaction)
-                    
-                    # 处理收集到的批次
-                    for interaction in update_samples:
-                        # 获取批次数据
-                        interaction = interaction.to(self.device)
-                        item_seq = interaction[self.model.ITEM_SEQ]
-                        item_seq_len = interaction[self.model.ITEM_SEQ_LEN]
-                        pos_items = interaction[self.model.POS_ITEM_ID]
-                        
-                        # 计算序列表示
-                        with torch.no_grad():
-                            seq_output = self.model.forward(item_seq, item_seq_len)
-                            pos_items_emb = self.model.item_embedding(pos_items)
-                        
-                        # 更新记忆模块，传入用户ID和序列长度
-                        self.model.update_memory(
-                            seq_output, 
-                            pos_items_emb,
-                            user_ids=interaction[self.model.USER_ID],
-                            seq_lens=interaction[self.model.ITEM_SEQ_LEN]
-                        )
-                except Exception as e:
-                    print(f"记忆模块更新出错: {e}")
+            return result
             
+        def fit(self, train_data, valid_data=None, verbose=True, saved=True, show_progress=False, callback_fn=None):
+            # 调用父类方法进行训练
+            result = super().fit(train_data, valid_data, verbose, saved, show_progress, callback_fn)
+            
+            # 训练结束后进行最终的分布差异分析
+            if hasattr(self.model, 'summarize_distribution_analysis'):
+                self.logger.info("训练结束，进行最终的检索器与推荐器分布差异分析...")
+                self.model.summarize_distribution_analysis()
+                
             return result
     
     # 使用自定义Trainer
@@ -177,6 +180,11 @@ def run_ftragrec(model=None, dataset=None, config_file_list=None, config_dict=No
     # 在测试前设置是否使用检索增强
     if 'use_retrieval_for_predict' in config:
         ftragrec.use_retrieval_for_predict = config['use_retrieval_for_predict']
+        trainer.logger.info(f"预测阶段检索增强: {'启用' if ftragrec.use_retrieval_for_predict else '禁用'}")
+        if ftragrec.use_retrieval_for_predict:
+            trainer.logger.info(f"预测阶段检索混合比例: {ftragrec.predict_retrieval_alpha}")
+            trainer.logger.info(f"预测阶段检索温度参数: {ftragrec.predict_retrieval_temperature}")
+            
     # 测试最佳模型
     test_result = trainer.evaluate(test_data, load_best_model=True, show_progress=config['show_progress'])
     trainer.logger.info(f"best valid : {trainer.best_valid_result}")
@@ -199,6 +207,13 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='FTragrec', help='模型名称')
     parser.add_argument('--log_dir', type=str, default=None, help='日志目录')
     
+    # 新增检索器参数
+    parser.add_argument('--retriever_layers', type=int, default=None, help='检索器层数')
+    parser.add_argument('--retriever_inner_size', type=int, default=None, help='检索器内部大小')
+    parser.add_argument('--retriever_act', type=str, default=None, help='检索器激活函数')
+    parser.add_argument('--retriever_dropout', type=float, default=None, help='检索器Dropout')
+    parser.add_argument('--kl_weight', type=float, default=None, help='KL损失权重')
+    
     # 使用parse_known_args代替parse_args，这样可以接受额外的参数
     args, unknown_args = parser.parse_known_args()
     
@@ -211,6 +226,22 @@ if __name__ == '__main__':
     
     if args.log_dir:
         config_dict['log_dir'] = args.log_dir
+        
+    # 添加检索器参数
+    if args.retriever_layers is not None:
+        config_dict['retriever_layers'] = args.retriever_layers
+    
+    if args.retriever_inner_size is not None:
+        config_dict['retriever_inner_size'] = args.retriever_inner_size
+    
+    if args.retriever_act is not None:
+        config_dict['retriever_act'] = args.retriever_act
+    
+    if args.retriever_dropout is not None:
+        config_dict['retriever_dropout'] = args.retriever_dropout
+        
+    if args.kl_weight is not None:
+        config_dict['kl_weight'] = args.kl_weight
     
     # 处理未知参数，将它们添加到config_dict
     i = 0

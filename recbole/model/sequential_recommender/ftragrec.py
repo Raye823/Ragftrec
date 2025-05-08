@@ -10,159 +10,95 @@ FTragrec combines Retrieval-based and Transformer-based recommendation
 with a specialized RetrieverEncoder that can be fine-tuned for better retrieval quality.
 """
 
-import torch, heapq, scipy, random, math
+import torch, heapq, scipy, faiss, random, math
+from faiss import normalize_L2
 from torch import nn
-import torch.nn.functional as F
 import numpy as np
 from recbole.model.abstract_recommender import SequentialRecommender
-from recbole.model.layers import TransformerEncoder, FeedForward, activation_layer, MLPLayers, CrossMultiHeadAttention
+from recbole.model.layers import TransformerEncoder, FeedForward, activation_layer, MLPLayers
 from recbole.model.loss import BPRLoss
 
 
-# 添加可微分记忆模块
-class DifferentiableMemory(nn.Module):
-    """可微分记忆模块，完全替代FAISS索引功能
+class EnhancedRetrieverEncoder(nn.Module):
+    """增强版检索器编码器"""
     
-    该模块维护一组可学习的记忆键、值向量和用户ID信息，
-    实现端到端可微分的检索，并支持用户ID过滤
-    """
-    
-    def __init__(self, hidden_size, memory_size=4096, temperature=0.1, device="cuda"):
-        super(DifferentiableMemory, self).__init__()
-        # 初始化记忆向量
-        self.memory_keys = nn.Parameter(torch.randn(memory_size, hidden_size))
-        self.memory_values = nn.Parameter(torch.randn(memory_size, hidden_size))
+    def __init__(self, hidden_size, inner_size, dropout_prob=0.1, act_type="gelu", layer_norm_eps=1e-12, num_layers=2):
+        super(EnhancedRetrieverEncoder, self).__init__()
         
-        # 初始化参数
-        nn.init.normal_(self.memory_keys, mean=0.0, std=0.02)
-        nn.init.normal_(self.memory_values, mean=0.0, std=0.02)
+        # 多层次特征变换
+        self.input_norm = nn.LayerNorm(hidden_size, eps=layer_norm_eps)
         
-        # 用于记录每个记忆项对应的用户ID和序列长度
-        self.register_buffer("user_ids", torch.zeros(memory_size, dtype=torch.long))
-        self.register_buffer("seq_lens", torch.zeros(memory_size, dtype=torch.long))
+        # 获取正确的激活函数
+        if act_type.lower() == 'gelu':
+            activation_func = nn.GELU()
+        elif act_type.lower() == 'relu':
+            activation_func = nn.ReLU()
         
-        # 记录当前记忆模块使用情况
-        self.register_buffer("usage_count", torch.zeros(memory_size, dtype=torch.long))
-        self.current_position = 0
-        self.memory_size = memory_size
-        self.is_initialized = False
-        
-        # 温度参数和设备
-        self.temperature = nn.Parameter(torch.tensor(temperature))
-        self.device = device
-        
-    def normalize_keys(self):
-        """L2归一化记忆键以提高检索效率"""
-        with torch.no_grad():
-            keys_norm = torch.norm(self.memory_keys, p=2, dim=1, keepdim=True)
-            self.memory_keys.data = self.memory_keys.data / (keys_norm + 1e-8)
-    
-    def update_memories(self, query_vectors, value_vectors, user_ids, seq_lens, update_positions=None):
-        """更新记忆模块中的特定位置
-        
-        Args:
-            query_vectors: 查询向量 [batch_size, hidden_size]
-            value_vectors: 值向量 [batch_size, hidden_size]
-            user_ids: 用户ID [batch_size]
-            seq_lens: 序列长度 [batch_size]
-            update_positions: 指定更新的位置，如果为None则使用循环缓冲区策略
-        """
-        batch_size = query_vectors.size(0)
-        with torch.no_grad():
-            # 如果未指定更新位置，使用循环缓冲区策略
-            if update_positions is None:
-                update_positions = []
-                for i in range(batch_size):
-                    pos = self.current_position
-                    update_positions.append(pos)
-                    self.current_position = (self.current_position + 1) % self.memory_size
-            
-            # 更新指定位置的记忆
-            for i, pos in enumerate(update_positions):
-                if i >= batch_size:
-                    break
-                    
-                self.memory_keys.data[pos] = query_vectors[i].data
-                self.memory_values.data[pos] = value_vectors[i].data
-                self.user_ids[pos] = user_ids[i]
-                self.seq_lens[pos] = seq_lens[i]
-                self.usage_count[pos] = 0  # 重置使用计数
-            
-            # 增加所有记忆项的使用计数
-            self.usage_count += 1
-            
-            # 标记为已初始化
-            if not self.is_initialized and batch_size > 0:
-                self.is_initialized = True
+        # 主干网络 - 使用残差连接和层归一化
+        self.transform_layers = nn.ModuleList()
+        for _ in range(num_layers):
+            layer_modules = nn.ModuleDict({
+                # 残差块1: 自注意力机制，捕捉特征间关系
+                'attention': nn.Sequential(
+                    nn.Linear(hidden_size, hidden_size),
+                    nn.LayerNorm(hidden_size, eps=layer_norm_eps),
+                    activation_func,
+                    nn.Linear(hidden_size, hidden_size),
+                    nn.Dropout(dropout_prob)
+                ),
+                'norm1': nn.LayerNorm(hidden_size, eps=layer_norm_eps),
                 
-            # 归一化记忆键
-            self.normalize_keys()
-    
-    def forward(self, queries, user_ids=None, seq_lens=None, top_k=5, filter_same_user=True):
-        """从记忆库中检索与查询相关的记忆项，支持用户ID过滤
-        
-        Args:
-            queries: 查询向量 [batch_size, hidden_size]
-            user_ids: 当前用户ID [batch_size]，用于过滤
-            seq_lens: 当前序列长度 [batch_size]，用于过滤
-            top_k: 返回的记忆项数量
-            filter_same_user: 是否过滤相同用户的记忆项
+                # 残差块2: 前馈网络，提升非线性表达能力
+                'ffn': nn.Sequential(
+                    nn.Linear(hidden_size, inner_size),
+                    activation_func,
+                    nn.Dropout(dropout_prob),
+                    nn.Linear(inner_size, hidden_size),
+                    nn.Dropout(dropout_prob)
+                ),
+                'norm2': nn.LayerNorm(hidden_size, eps=layer_norm_eps)
+            })
+            self.transform_layers.append(layer_modules)
             
-        Returns:
-            retrieved_keys: 检索的记忆键 [batch_size, top_k, hidden_size]
-            retrieved_values: 检索的记忆值 [batch_size, top_k, hidden_size]
-            attention_scores: 注意力分数 [batch_size, top_k]
-        """
-        if not self.is_initialized:
-            # 如果记忆模块未初始化，返回空结果
-            batch_size = queries.size(0)
-            empty_keys = torch.zeros((batch_size, top_k, queries.size(1)), device=queries.device)
-            empty_vals = torch.zeros((batch_size, top_k, queries.size(1)), device=queries.device)
-            empty_weights = torch.ones((batch_size, top_k), device=queries.device) / top_k
-            return empty_keys, empty_vals, empty_weights
+        # 投影头，将表示映射到检索空间
+        self.projection_head = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            activation_func,
+            nn.Linear(hidden_size, hidden_size)
+        )
+        
+        # 输出归一化
+        self.output_norm = nn.LayerNorm(hidden_size, eps=layer_norm_eps)
+        
+    def forward(self, input_vectors):
+        # 输入归一化
+        hidden_states = self.input_norm(input_vectors)
+        
+        # 多层次特征变换
+        for layer_modules in self.transform_layers:
+            # 第一个残差块 - 自注意力
+            residual = hidden_states
+            hidden_states = layer_modules['attention'](hidden_states)
+            hidden_states = residual + hidden_states
+            hidden_states = layer_modules['norm1'](hidden_states)
             
-        # 归一化查询向量
-        queries_norm = F.normalize(queries, p=2, dim=1)
+            # 第二个残差块 - 前馈网络
+            residual = hidden_states
+            hidden_states = layer_modules['ffn'](hidden_states)
+            hidden_states = residual + hidden_states
+            hidden_states = layer_modules['norm2'](hidden_states)
         
-        # 计算查询与所有记忆键的相似度
-        similarity = torch.matmul(queries_norm, self.memory_keys.transpose(0, 1))  # [batch_size, memory_size]
+        # 投影到检索空间
+        output = self.projection_head(hidden_states)
         
-        # 应用温度缩放
-        similarity = similarity / self.temperature
+        # 输出归一化
+        output = self.output_norm(output)
         
-        # 创建掩码，排除相同用户的记忆(如果需要)
-        batch_size = queries.size(0)
-        if filter_same_user and user_ids is not None:
-            user_masks = []
-            for i in range(batch_size):
-                if i < len(user_ids):
-                    # 创建掩码：相同用户ID且序列长度大于等于当前序列长度的项为False，其他为True
-                    current_user = user_ids[i]
-                    current_seq_len = seq_lens[i] if seq_lens is not None else 0
-                    
-                    user_mask = ~((self.user_ids == current_user) & (self.seq_lens >= current_seq_len))
-                    user_masks.append(user_mask)
-                else:
-                    # 为超出范围的批次项创建全True掩码
-                    user_masks.append(torch.ones_like(self.user_ids, dtype=torch.bool))
-            
-            # 合并所有用户掩码
-            user_mask = torch.stack(user_masks)  # [batch_size, memory_size]
-            
-            # 将掩码应用到相似度上（将要排除的项设为很大的负值）
-            similarity = similarity.masked_fill(~user_mask, -1e9)
+        # L2归一化
+        output_norm = torch.norm(output, p=2, dim=-1, keepdim=True)
+        output = output / (output_norm + 1e-8)
         
-        # 获取top_k相似度及索引
-        topk_similarity, topk_indices = torch.topk(similarity, min(top_k, similarity.size(1)), dim=1)
-        
-        # 计算softmax得到注意力权重
-        topk_weights = F.softmax(topk_similarity, dim=1)
-        
-        # 收集top_k记忆键和值
-        retrieved_keys = self.memory_keys[topk_indices]  # [batch_size, top_k, hidden_size]
-        retrieved_values = self.memory_values[topk_indices]  # [batch_size, top_k, hidden_size]
-        
-        return retrieved_keys, retrieved_values, topk_weights
+        return output
 
 
 class FTragrec(SequentialRecommender):
@@ -192,21 +128,20 @@ class FTragrec(SequentialRecommender):
         self.len_lower_bound = config["len_lower_bound"] if "len_lower_bound" in config else -1
         self.len_upper_bound = config["len_upper_bound"] if "len_upper_bound" in config else -1
         self.len_bound_reverse = config["len_bound_reverse"] if "len_bound_reverse" in config else True
+        self.nprobe = config['nprobe'] if 'nprobe' in config else 8
         self.topk = config['top_k'] if 'top_k' in config else 5
         
-        # RetrieverEncoder相关参数
+        # RetrieverEncoder相关参数 - 支持新增配置参数
         self.retriever_layers = config['retriever_layers'] if 'retriever_layers' in config else 2
         self.retriever_temperature = config['retriever_temperature'] if 'retriever_temperature' in config else 0.1
         self.retriever_dropout = config['retriever_dropout'] if 'retriever_dropout' in config else 0.1
         self.retriever_update_interval = config['retriever_update_interval'] if 'retriever_update_interval' in config else 5
         self.kl_weight = config['kl_weight'] if 'kl_weight' in config else 0.05  # 降低KL损失权重，因为现在是双向的
         
-        # 可微分记忆模块参数 - 现在作为主要检索机制
-        self.memory_size = config['memory_size'] if 'memory_size' in config else 8192
-        self.use_diff_memory = True  # 始终使用可微分记忆模块
-        self.memory_weight = config['memory_weight'] if 'memory_weight' in config else 0.3
-        self.diff_temperature = config['diff_temperature'] if 'diff_temperature' in config else 0.1
-        self.filter_same_user = config['filter_same_user'] if 'filter_same_user' in config else True
+        # 增强检索器网络参数 - 使用新增配置
+        self.retriever_inner_size = config['retriever_inner_size'] if 'retriever_inner_size' in config else self.inner_size
+        self.retriever_layer_norm_eps = config['retriever_layer_norm_eps'] if 'retriever_layer_norm_eps' in config else self.layer_norm_eps
+        self.retriever_act = config['retriever_act'] if 'retriever_act' in config else self.hidden_act
         
         # 训练相关参数
         self.batch_size = config['train_batch_size']
@@ -228,23 +163,14 @@ class FTragrec(SequentialRecommender):
             layer_norm_eps=self.layer_norm_eps
         )
         
-        # 检索器编码器 - 基于Contriever设计
-        self.retriever_encoder_layers = nn.ModuleList([
-            FeedForward(
-                self.hidden_size, 
-                self.inner_size, 
-                self.retriever_dropout, 
-                self.hidden_act, 
-                self.layer_norm_eps
-            ) for _ in range(self.retriever_layers)
-        ])
-        
-        # 可微分记忆模块 - 用于端到端训练
-        self.diff_memory = DifferentiableMemory(
+        # 使用增强版检索器编码器替代原来的检索器编码器 - 使用新增配置参数
+        self.retriever_encoder = EnhancedRetrieverEncoder(
             hidden_size=self.hidden_size,
-            memory_size=self.memory_size,
-            temperature=self.diff_temperature,
-            device=config['device'] if 'device' in config else 'cuda'
+            inner_size=self.retriever_inner_size,
+            dropout_prob=self.retriever_dropout,
+            act_type=self.retriever_act,
+            layer_norm_eps=self.retriever_layer_norm_eps,
+            num_layers=self.retriever_layers
         )
         
         self.LayerNorm = nn.LayerNorm(self.hidden_size, eps=self.layer_norm_eps)
@@ -260,11 +186,12 @@ class FTragrec(SequentialRecommender):
         # 参数初始化
         self.apply(self._init_weights)
         
-        # 数据集
+        # 数据集和检索索引
         self.dataset = dataset
-        
-        # 统计已处理的样本数
-        self.processed_samples = 0
+        self.seq_emb_knowledge = None
+        self.tar_emb_knowledge = None
+        self.user_id_list = None
+        self.item_seq_len_all = None
 
         # 新增预测阶段检索增强相关参数
         self.use_retrieval_for_predict = config['use_retrieval_for_predict'] if 'use_retrieval_for_predict' in config else True
@@ -276,36 +203,28 @@ class FTragrec(SequentialRecommender):
         
         # 增强推荐损失权重参数
         self.enhanced_rec_weight = config['enhanced_rec_weight'] if 'enhanced_rec_weight' in config else 0.8
-        
-        # 添加基于注意力的增强层 - 单通道增强
-        self.attention_temperature = config['attention_temperature'] if 'attention_temperature' in config else 0.2
-        self.dropout_rate = config['dropout_rate'] if 'dropout_rate' in config else 0.1
-        
-        # 序列增强的注意力层
-        self.seq_tar_attention = CrossMultiHeadAttention(
-            n_heads=self.n_heads,
-            hidden_size=self.hidden_size,
-            hidden_dropout_prob=self.dropout_rate,
-            attn_dropout_prob=self.dropout_rate,
-            layer_norm_eps=self.layer_norm_eps,
-            attn_tau=self.attention_temperature
-        )
-        
-        # 序列增强的前馈网络
-        self.seq_tar_fnn = FeedForward(
-            self.hidden_size, 
-            self.inner_size, 
-            self.dropout_rate, 
-            self.hidden_act, 
-            self.layer_norm_eps
-        )
-        
+
         # 统计模型参数量
         total_params = sum(p.numel() for p in self.parameters())
         trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f'\nFTragrec模型总参数量: {total_params:,}')
         print(f'可训练参数量: {trainable_params:,}')
         
+        # 打印检索器编码器配置
+        print("\n检索器编码器配置:")
+        print(f"  - 层数: {self.retriever_layers}")
+        print(f"  - 内部大小: {self.retriever_inner_size}")
+        print(f"  - 激活函数: {self.retriever_act}")
+        print(f"  - Dropout: {self.retriever_dropout}")
+        print(f"  - 层归一化参数: {self.retriever_layer_norm_eps}")
+        print(f"  - 温度参数: {self.retriever_temperature}")
+        print(f"  - KL损失权重: {self.kl_weight}")
+        
+        # 添加调试统计信息收集器
+        self._init_debug_stats()
+        
+    
+            
     def _init_weights(self, module):
         """ 初始化权重 """
         if isinstance(module, (nn.Linear, nn.Embedding)):
@@ -348,16 +267,13 @@ class FTragrec(SequentialRecommender):
         trm_output = self.trm_encoder(input_emb, extended_attention_mask, output_all_encoded_layers=True)
         output = trm_output[-1]
         output = self.gather_indexes(output, item_seq_len - 1)
-        # 确保输出需要梯度
-        return output.requires_grad_(True)
+        return output  # [B H]
 
     def retriever_forward(self, seq_output):
         """检索器编码器前向传播 - 对序列表示进行非线性变换"""
         try:
-            retriever_output = seq_output
-            for layer in self.retriever_encoder_layers:
-                retriever_output = layer(retriever_output)
-            
+            # 使用增强版检索器编码器处理序列表示
+            retriever_output = self.retriever_encoder(seq_output)
             return retriever_output
             
         except Exception as e:
@@ -366,24 +282,28 @@ class FTragrec(SequentialRecommender):
             return seq_output
 
     def precached_knowledge(self, train_dataloader=None):
-        """初始化可微分记忆模块 - 预填充部分训练样本"""
-        print("开始初始化可微分记忆模块...")
+        """预缓存知识 - 构建检索索引"""
+        print("开始预缓存知识...")
         
         # 使用提供的dataloader或默认dataset
         dataloader_to_use = train_dataloader if train_dataloader is not None else self.dataset
         
-        # 遍历数据集中的一部分交互来初始化记忆
-        max_init_samples = min(self.memory_size, 2000)  # 限制初始化样本数量
+        seq_emb_knowledge, tar_emb_knowledge, user_id_list = None, None, None
+        item_seq_all = None
+        item_seq_len_all = None
+        
+        # 遍历数据集中的所有交互
         batch_count = 0
-        valid_samples = 0
+        valid_batch_count = 0
+        total_samples_before_filter = 0
+        total_samples_after_filter = 0
         
         for batch_idx, interaction in enumerate(dataloader_to_use):
+            batch_count += 1
             try:
-                if valid_samples >= max_init_samples:
-                    break
-                    
-                interaction = interaction.to(self.diff_memory.device)
+                interaction = interaction.to("cuda")
                 batch_size = interaction[self.ITEM_SEQ].shape[0]
+                total_samples_before_filter += batch_size
                 
                 # 根据序列长度过滤
                 if self.len_lower_bound != -1 or self.len_upper_bound != -1:
@@ -398,181 +318,316 @@ class FTragrec(SequentialRecommender):
                 else:
                     look_up_indices = interaction[self.ITEM_SEQ_LEN]>-1
                 
-                # 如果没有有效样本，跳过这个批次
-                if look_up_indices.sum().item() == 0:
+                # 统计过滤后的样本数量
+                valid_samples = look_up_indices.sum().item()
+                total_samples_after_filter += valid_samples
+                
+                if valid_samples == 0:
                     continue
+                    
+                valid_batch_count += 1
                 
-                # 获取经过过滤的数据
+                # 获取序列和长度信息
                 item_seq = interaction[self.ITEM_SEQ][look_up_indices]
-                item_seq_len = interaction[self.ITEM_SEQ_LEN][look_up_indices]
-                user_ids = interaction[self.USER_ID][look_up_indices]
-                tar_items = interaction[self.POS_ITEM_ID][look_up_indices]
                 
-                # 获取序列表示
+                if item_seq_all is None:
+                    item_seq_all = item_seq
+                else:
+                    item_seq_all = torch.cat((item_seq_all, item_seq), dim=0)
+                    
+                item_seq_len = interaction[self.ITEM_SEQ_LEN][look_up_indices]
+                item_seq_len_list = list(interaction[self.ITEM_SEQ_LEN][look_up_indices].detach().cpu().numpy())
+                
+                if isinstance(item_seq_len_all, list):
+                    item_seq_len_all.extend(item_seq_len_list)
+                else:
+                    item_seq_len_all = item_seq_len_list
+                    
+                # 获取序列表示和目标项表示
                 seq_output = self.forward(item_seq, item_seq_len)
                 
-                # 使用检索器编码器获取查询向量
-                retriever_output = self.retriever_forward(seq_output)
+                # 使用检索器编码器进行非线性变换
+                try:
+                    retriever_output = self.retriever_forward(seq_output)
+                except Exception as e:
+                    print(f"retriever_forward执行失败: {e}")
+                    retriever_output = seq_output
                 
-                # 获取目标物品表示
+                tar_items = interaction[self.POS_ITEM_ID][look_up_indices]
                 tar_items_emb = self.item_embedding(tar_items)
                 
-                # 更新可微分记忆模块
-                current_batch_size = retriever_output.size(0)
-                update_size = min(current_batch_size, max_init_samples - valid_samples)
+                user_id_cans = list(interaction[self.USER_ID][look_up_indices].detach().cpu().numpy())
                 
-                self.diff_memory.update_memories(
-                    retriever_output[:update_size], 
-                    tar_items_emb[:update_size],
-                    user_ids[:update_size].cpu(),
-                    item_seq_len[:update_size].cpu()
-                )
-                
-                valid_samples += update_size
-                batch_count += 1
-                
-                # 打印进度
-                if batch_count % 10 == 0:
-                    print(f"已初始化 {valid_samples}/{max_init_samples} 个样本")
+                # 累积序列表示和目标项表示
+                try:
+                    retriever_output_np = retriever_output.detach().cpu().numpy()
                     
+                    if isinstance(seq_emb_knowledge, np.ndarray):
+                        seq_emb_knowledge = np.concatenate((seq_emb_knowledge, retriever_output_np), 0)
+                    else:
+                        seq_emb_knowledge = retriever_output_np
+                    
+                    tar_items_emb_np = tar_items_emb.detach().cpu().numpy()
+                    if isinstance(tar_emb_knowledge, np.ndarray):
+                        tar_emb_knowledge = np.concatenate((tar_emb_knowledge, tar_items_emb_np), 0)
+                    else:
+                        tar_emb_knowledge = tar_items_emb_np
+                    
+                    if isinstance(user_id_list, list):
+                        user_id_list.extend(user_id_cans)
+                    else:
+                        user_id_list = user_id_cans
+                except Exception as e:
+                    print(f"处理批次 {batch_idx} 时出错: {e}")
+                    continue
             except Exception as e:
                 print(f"处理批次 {batch_idx} 时出错: {e}")
-                continue
                 
-        print(f"记忆模块初始化完成: 共处理 {batch_count} 个批次，初始化了 {valid_samples} 个样本")
-        print(f"记忆模块大小: {self.memory_size}")
+        print(f"数据收集完成: 总批次={batch_count}, 有效批次={valid_batch_count}, 过滤后样本数={total_samples_after_filter}/{total_samples_before_filter}")
         
-        # 归一化记忆键以提高检索效率
-        self.diff_memory.normalize_keys()
-
-    def update_memory(self, batch_seqs, batch_targets, user_ids=None, seq_lens=None):
-        """更新可微分记忆模块
-        
-        该方法在训练过程中周期性调用，用于将当前批次的序列表示和目标物品表示
-        作为知识更新到可微分记忆模块中。
-        
-        Args:
-            batch_seqs: 批次序列表示 [batch_size, hidden_size]
-            batch_targets: 批次目标物品表示 [batch_size, hidden_size]
-            user_ids: 用户ID [batch_size]，用于记录所有者信息
-            seq_lens: 序列长度 [batch_size]，用于记录序列长度
-        """
-        if not self.use_diff_memory or not hasattr(self, 'diff_memory'):
+        # 数据验证
+        if seq_emb_knowledge is None or len(seq_emb_knowledge) == 0:
+            print("错误: seq_emb_knowledge 为空! 请检查数据集和过滤条件是否正确。")
             return
             
-        # 处理序列表示
-        retriever_output = self.retriever_forward(batch_seqs)
+        print(f"收集到的嵌入: seq_emb_knowledge形状={seq_emb_knowledge.shape}, tar_emb_knowledge形状={tar_emb_knowledge.shape}")
         
-        # 从当前批次中随机选择样本更新记忆模块 (防止单个批次占据过多记忆空间)
-        batch_size = batch_seqs.size(0)
+        # 保存数据
+        self.user_id_list = user_id_list
+        self.item_seq_all = item_seq_all
+        self.item_seq_len_all = item_seq_len_all
+        self.seq_emb_knowledge = seq_emb_knowledge
+        self.tar_emb_knowledge = tar_emb_knowledge
         
-        # 计算会被更新的样本数
-        update_size = min(batch_size, max(1, self.memory_size // 100))  # 每次最多更新记忆库大小的1%
+        # 构建FAISS索引
+        d = 64  # 使用固定维度值64，与RaSeRec一致
         
-        # 随机选择更新的样本索引
-        if batch_size > update_size:
-            indices = torch.randperm(batch_size)[:update_size]
-            update_queries = retriever_output[indices]
-            update_values = batch_targets[indices]
-            
-            if user_ids is not None:
-                update_users = user_ids[indices]
-            else:
-                update_users = torch.zeros(update_size, dtype=torch.long, device=batch_seqs.device)
-                
-            if seq_lens is not None:
-                update_seqlens = seq_lens[indices]
-            else:
-                update_seqlens = torch.zeros(update_size, dtype=torch.long, device=batch_seqs.device)
-        else:
-            update_queries = retriever_output
-            update_values = batch_targets
-            update_users = user_ids if user_ids is not None else torch.zeros(batch_size, dtype=torch.long, device=batch_seqs.device)
-            update_seqlens = seq_lens if seq_lens is not None else torch.zeros(batch_size, dtype=torch.long, device=batch_seqs.device)
+        # 根据数据量调整nlist
+        n_samples = len(seq_emb_knowledge)
+        nlist = min(128, max(1, n_samples // 39))  # 确保nlist不大于样本数量的1/39
+        print(f"构建FAISS索引: 样本数={n_samples}, nlist={nlist}, 维度={d}")
         
-        # 更新记忆模块
-        # 选择使用率最低的记忆项进行更新
-        self.diff_memory.update_memories(
-            update_queries, 
-            update_values,
-            update_users.cpu() if update_users.device != torch.device('cpu') else update_users,
-            update_seqlens.cpu() if update_seqlens.device != torch.device('cpu') else update_seqlens
-        )
-        
-        # 增加处理的样本计数
-        self.processed_samples += batch_size
-
-    def update_memory_index(self):
-        """更新可微分记忆模块索引"""
-        print("开始优化可微分记忆模块...")
-        
-        # 简单地归一化记忆键以保持检索效率
-        self.diff_memory.normalize_keys()
-        
-        # 打印当前状态
-        print(f"记忆模块状态: 已处理样本数={self.processed_samples}")
-        
-        # 可以在这里添加优化逻辑，如移除最少使用的项等
-        # 这里我们保持简单，只进行归一化
-
-    def retrieve_seq_tar(self, queries, batch_user_id, batch_seq_len, topk=5):
-        """检索相似的序列和目标项，使用可微分记忆模块
-        
-        该方法使用可微分记忆模块进行端到端可训练的检索
-        """
         try:
-            # 使用检索器编码器处理查询
-            retriever_queries = self.retriever_forward(queries)
+            # 创建seq_emb索引
+            seq_emb_knowledge_copy = np.array(seq_emb_knowledge, copy=True)
+            normalize_L2(seq_emb_knowledge_copy)
             
-            # 将batch_user_id和batch_seq_len转换为tensor (如果它们是列表)
-            if isinstance(batch_user_id, list):
-                user_ids = torch.tensor(batch_user_id, device=retriever_queries.device)
-            else:
-                user_ids = batch_user_id
-                
-            if isinstance(batch_seq_len, list):
-                seq_lens = torch.tensor(batch_seq_len, device=retriever_queries.device)
-            else:
-                seq_lens = batch_seq_len
+            seq_emb_quantizer = faiss.IndexFlatL2(d) 
+            self.seq_emb_index = faiss.IndexIVFFlat(seq_emb_quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT) 
+            self.seq_emb_index.train(seq_emb_knowledge_copy)
+            self.seq_emb_index.add(seq_emb_knowledge_copy)    
+            self.seq_emb_index.nprobe = self.nprobe
+
+            # 创建tar_emb索引
+            tar_emb_knowledge_copy = np.array(tar_emb_knowledge, copy=True)
+            normalize_L2(tar_emb_knowledge_copy)
+            tar_emb_quantizer = faiss.IndexFlatL2(d) 
+            self.tar_emb_index = faiss.IndexIVFFlat(tar_emb_quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT) 
+            self.tar_emb_index.train(tar_emb_knowledge_copy)
+            self.tar_emb_index.add(tar_emb_knowledge_copy) 
+            self.tar_emb_index.nprobe = self.nprobe
             
-            # 从可微分记忆中检索
-            memory_keys, memory_values, memory_weights = self.diff_memory(
-                retriever_queries, 
-                user_ids=user_ids,
-                seq_lens=seq_lens,
-                top_k=min(topk, self.memory_size),
-                filter_same_user=self.filter_same_user
-            )
-            
-            # 确保记忆结果保留梯度信息
-            memory_keys.requires_grad_(True)
-            memory_values.requires_grad_(True)
-            
-            return memory_keys, memory_values
+            print("FAISS索引构建完成")
             
         except Exception as e:
-            print(f"可微分记忆检索出错: {e}")
-            # 出错时返回空结果
-            batch_size = queries.size(0)
-            empty_seqs = torch.zeros((batch_size, 1, self.hidden_size), device=queries.device, requires_grad=True)
-            empty_tars = torch.zeros((batch_size, 1, self.hidden_size), device=queries.device, requires_grad=True)
-            return empty_seqs, empty_tars
+            print(f"FAISS索引构建过程中出错: {e}")
+            return
+
+    def update_faiss_index(self, train_dataloader=None):
+        """使用最新的模型参数更新FAISS索引"""
+        
+        print("开始更新FAISS索引...")
+        
+        # 使用提供的dataloader或默认dataset
+        dataloader_to_use = train_dataloader if train_dataloader is not None else self.dataset
+        
+        # 检查数据集状态
+        print(f"数据集类型: {type(dataloader_to_use)}")
+        if hasattr(dataloader_to_use, "__len__"):
+            print(f"数据集大小: {len(dataloader_to_use)}")
+        
+        seq_emb_knowledge, tar_emb_knowledge, user_id_list = None, None, None
+        item_seq_all = None
+        item_seq_len_all = None
+        
+        # 遍历数据集中的所有交互，重新计算表示
+        batch_count = 0
+        valid_batch_count = 0
+        total_samples_before_filter = 0
+        total_samples_after_filter = 0
+        
+        print("开始遍历数据集...")
+        
+        # 正式遍历数据集
+        for batch_idx, interaction in enumerate(dataloader_to_use):
+            batch_count += 1
+            try:
+                interaction = interaction.to("cuda")
+                batch_size = interaction[self.ITEM_SEQ].shape[0]
+                total_samples_before_filter += batch_size
+                
+                # 根据序列长度过滤
+                if self.len_lower_bound != -1 or self.len_upper_bound != -1:
+                    if self.len_lower_bound != -1 and self.len_upper_bound != -1:
+                        look_up_indices = (interaction[self.ITEM_SEQ_LEN]>=self.len_lower_bound) * (interaction[self.ITEM_SEQ_LEN]<=self.len_upper_bound)
+                    elif self.len_upper_bound != -1:
+                        look_up_indices = interaction[self.ITEM_SEQ_LEN]<self.len_upper_bound
+                    else:
+                        look_up_indices = interaction[self.ITEM_SEQ_LEN]>self.len_lower_bound
+                    if self.len_bound_reverse:
+                        look_up_indices = ~look_up_indices
+                else:
+                    look_up_indices = interaction[self.ITEM_SEQ_LEN]>-1
+                
+                # 统计过滤后的样本数量
+                valid_samples = look_up_indices.sum().item()
+                total_samples_after_filter += valid_samples
+                
+                if valid_samples == 0:
+                    continue
+                    
+                valid_batch_count += 1
+                
+                # 获取序列和长度信息
+                item_seq = interaction[self.ITEM_SEQ][look_up_indices]
+                
+                if item_seq_all is None:
+                    item_seq_all = item_seq
+                else:
+                    item_seq_all = torch.cat((item_seq_all, item_seq), dim=0)
+                    
+                item_seq_len = interaction[self.ITEM_SEQ_LEN][look_up_indices]
+                item_seq_len_list = list(interaction[self.ITEM_SEQ_LEN][look_up_indices].detach().cpu().numpy())
+                
+                if isinstance(item_seq_len_all, list):
+                    item_seq_len_all.extend(item_seq_len_list)
+                else:
+                    item_seq_len_all = item_seq_len_list
+                
+                # 使用最新的模型参数重新计算序列表示
+                seq_output = self.forward(item_seq, item_seq_len)
+                
+                # 使用最新的检索器编码器进行非线性变换
+                retriever_output = self.retriever_forward(seq_output)
+                
+                tar_items = interaction[self.POS_ITEM_ID][look_up_indices]
+                tar_items_emb = self.item_embedding(tar_items)
+                
+                user_id_cans = list(interaction[self.USER_ID][look_up_indices].detach().cpu().numpy())
+                
+                # 累积序列表示和目标项表示
+                retriever_output_np = retriever_output.detach().cpu().numpy()
+                
+                if isinstance(seq_emb_knowledge, np.ndarray):
+                    seq_emb_knowledge = np.concatenate((seq_emb_knowledge, retriever_output_np), 0)
+                else:
+                    seq_emb_knowledge = retriever_output_np
+                
+                tar_items_emb_np = tar_items_emb.detach().cpu().numpy()
+                if isinstance(tar_emb_knowledge, np.ndarray):
+                    tar_emb_knowledge = np.concatenate((tar_emb_knowledge, tar_items_emb_np), 0)
+                else:
+                    tar_emb_knowledge = tar_items_emb_np
+                
+                if isinstance(user_id_list, list):
+                    user_id_list.extend(user_id_cans)
+                else:
+                    user_id_list = user_id_cans
+                
+            except Exception as e:
+                print(f"处理批次 {batch_idx} 时出错: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        print(f"数据收集完成: 总批次={batch_count}, 有效批次={valid_batch_count}, 过滤后样本数={total_samples_after_filter}/{total_samples_before_filter}")
+        
+        # 数据验证
+        if seq_emb_knowledge is None or len(seq_emb_knowledge) == 0:
+            print("错误: seq_emb_knowledge 为空! 请检查数据集和过滤条件是否正确。")
+            return
+            
+        print(f"收集到的最新嵌入: seq_emb_knowledge形状={seq_emb_knowledge.shape}, tar_emb_knowledge形状={tar_emb_knowledge.shape}")
+        
+        # 更新存储的数据
+        self.user_id_list = user_id_list
+        self.item_seq_all = item_seq_all
+        self.item_seq_len_all = item_seq_len_all
+        self.seq_emb_knowledge = seq_emb_knowledge
+        self.tar_emb_knowledge = tar_emb_knowledge
+        
+        # 构建FAISS索引
+        d = 64  # 使用固定维度值64，与RaSeRec一致
+        
+        # 根据数据量调整nlist
+        n_samples = len(seq_emb_knowledge)
+        nlist = min(128, max(1, n_samples // 39))  # 确保nlist不大于样本数量的1/39
+        print(f"更新FAISS索引: 样本数={n_samples}, nlist={nlist}, 维度={d}")
+        
+        try:
+            # 创建seq_emb索引
+            seq_emb_knowledge_copy = np.array(seq_emb_knowledge, copy=True)
+            normalize_L2(seq_emb_knowledge_copy)
+            
+            seq_emb_quantizer = faiss.IndexFlatL2(d) 
+            self.seq_emb_index = faiss.IndexIVFFlat(seq_emb_quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT) 
+            self.seq_emb_index.train(seq_emb_knowledge_copy)
+            self.seq_emb_index.add(seq_emb_knowledge_copy)    
+            self.seq_emb_index.nprobe = self.nprobe
+            print(f"FAISS索引nprobe设置为: {self.seq_emb_index.nprobe}")
+
+            # 创建tar_emb索引
+            tar_emb_knowledge_copy = np.array(tar_emb_knowledge, copy=True)
+            normalize_L2(tar_emb_knowledge_copy)
+            tar_emb_quantizer = faiss.IndexFlatL2(d) 
+            self.tar_emb_index = faiss.IndexIVFFlat(tar_emb_quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT) 
+            self.tar_emb_index.train(tar_emb_knowledge_copy)
+            self.tar_emb_index.add(tar_emb_knowledge_copy) 
+            self.tar_emb_index.nprobe = self.nprobe
+            print(f"FAISS目标索引nprobe设置为: {self.tar_emb_index.nprobe}")
+            
+            print("FAISS索引更新完成")
+            
+        except Exception as e:
+            print(f"FAISS索引更新过程中出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+
+    def retrieve_seq_tar(self, queries, batch_user_id, batch_seq_len, topk=5):
+        """检索相似的序列和目标项"""
+        # 使用检索器编码器处理查询
+        retriever_queries = self.retriever_forward(queries)
+        
+        # 将查询转换为CPU张量并进行L2归一化
+        queries_cpu = retriever_queries.detach().cpu().numpy()
+        normalize_L2(queries_cpu)
+        
+        # 使用FAISS索引搜索相似序列
+        _, I1 = self.seq_emb_index.search(queries_cpu, 4*topk)
+        I1_filtered = []
+        
+        # 过滤结果
+        for i, I_entry in enumerate(I1):
+            current_user = batch_user_id[i]
+            current_length = batch_seq_len[i]
+            filtered_indices = [idx for idx in I_entry if self.user_id_list[idx] != current_user or (self.user_id_list[idx] == current_user and self.item_seq_len_all[idx] < current_length)]
+            I1_filtered.append(filtered_indices[:topk])
+            
+        I1_filtered = np.array(I1_filtered)
+        
+        # 获取检索到的序列和目标项表示
+        retrieval_seq = self.seq_emb_knowledge[I1_filtered]
+        retrieval_tar = self.tar_emb_knowledge[I1_filtered]
+        
+        return torch.tensor(retrieval_seq).to(queries.device), torch.tensor(retrieval_tar).to(queries.device)
 
     def compute_retrieval_scores(self, query_vectors, candidate_vectors):
-        """计算检索似然分布 - 计算查询序列与检索序列的相似度并转换为概率分布
-        
-        Args:
-            query_vectors: 查询向量 [batch_size, 1, hidden_size]
-            candidate_vectors: 候选向量 [batch_size, n_candidates, hidden_size]
-            
-        Returns:
-            retrieval_probs: 相似度概率分布 [batch_size, 1, n_candidates]
-        """
+        """计算检索似然分布 - 检索器认为序列d在给定输入x的条件下被选中的概率分布"""
         # 计算相似度分数
         similarity = torch.bmm(query_vectors, candidate_vectors.transpose(1, 2))
         
         # 应用温度缩放并转换为概率分布
-        retrieval_logits = similarity / self.predict_retrieval_temperature
+        retrieval_logits = similarity / self.retriever_temperature
         retrieval_probs = torch.softmax(retrieval_logits, dim=-1)
         
         return retrieval_probs  # [batch_size, 1, topk]
@@ -635,11 +690,11 @@ class FTragrec(SequentialRecommender):
         # 计算平均分布
         mean_probs = 0.5 * (retrieval_probs + recommendation_probs)
         
-        # KL(retrieval||mean) - 使用数值稳定的计算方式
-        kl_retrieval = torch.sum(retrieval_probs * (torch.log(retrieval_probs) - torch.log(mean_probs)), dim=-1)
+        # KL(retrieval||mean)
+        kl_retrieval = torch.sum(retrieval_probs * torch.log(retrieval_probs / mean_probs), dim=-1)
         
-        # KL(recommendation||mean) - 使用数值稳定的计算方式
-        kl_recommendation = torch.sum(recommendation_probs * (torch.log(recommendation_probs) - torch.log(mean_probs)), dim=-1)
+        # KL(recommendation||mean)
+        kl_recommendation = torch.sum(recommendation_probs * torch.log(recommendation_probs / mean_probs), dim=-1)
         
         # JS散度 = 0.5 * (KL(P||M) + KL(Q||M))
         js_div = 0.5 * (kl_retrieval + kl_recommendation)
@@ -647,7 +702,7 @@ class FTragrec(SequentialRecommender):
         return js_div.mean()
 
     def calculate_loss(self, interaction):
-        """计算模型损失，包括推荐损失、JS散度损失和记忆模块损失"""
+        """计算模型损失"""
         # 获取序列和长度
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
@@ -658,92 +713,85 @@ class FTragrec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)
         pos_items = interaction[self.POS_ITEM_ID]
         
-        # 第一部分：JS散度损失计算 - 用于优化检索器
-        js_loss = 0.0
-        # 检索相似序列和目标项
-        retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
-            seq_output, batch_user_id, batch_seq_len, topk=self.topk
-        )
-        
-        # 只有在成功检索到序列时才计算JS散度损失
-        if retrieved_seqs.size(0) > 0 and torch.sum(retrieved_seqs).item() > 1e-6:
-            # 计算检索似然分布
-            retrieval_probs = self.compute_retrieval_scores(
-                seq_output.unsqueeze(1), retrieved_seqs
-            ).squeeze(1)
-            
-            # 计算推荐模型的评分分布
-            recommendation_probs = self.compute_recommendation_scores(
-                seq_output, retrieved_seqs, retrieved_tars, pos_items
-            )
-            
-            # 计算JS散度损失
-            js_loss = self.compute_kl_loss(retrieval_probs, recommendation_probs)
-        
-        # 第二部分：可微分记忆模块的对比学习损失
-        memory_loss = 0.0
-        if self.use_diff_memory and hasattr(self, 'diff_memory'):
-            try:
-                # 获取当前批次的表示
-                retriever_output = self.retriever_forward(seq_output)
-                pos_items_emb = self.item_embedding(pos_items)
-                
-                # 从可微分记忆模块中检索
-                memory_keys, memory_values, memory_weights = self.diff_memory(
-                    retriever_output, top_k=min(5, self.memory_size)
-                )
-                
-                # 计算与正例的相似度
-                pos_sim = torch.bmm(
-                    pos_items_emb.unsqueeze(1),  # [batch_size, 1, hidden_size]
-                    memory_values.transpose(1, 2)  # [batch_size, hidden_size, top_k]
-                ).squeeze(1)  # [batch_size, top_k]
-                
-                # 最大化正例相似度的对数似然
-                log_probs = torch.log_softmax(pos_sim / 0.1, dim=1)  # 使用温度参数0.1
-                memory_loss = -torch.mean(torch.sum(memory_weights * log_probs, dim=1))
-                
-            except Exception as e:
-                print(f"计算记忆模块损失时出错: {e}")
-        
-        # 第三部分：序列增强 - 使用注意力机制的单通道增强
-        enhanced_seq_output = self.sequence_augmentation(seq_output, batch_user_id, batch_seq_len)
-        
-        # 使用增强后的序列表示计算推荐损失
+        # 基础推荐损失计算
         if self.loss_type == 'BPR':
             neg_items = interaction[self.NEG_ITEM_ID]
             pos_items_emb = self.item_embedding(pos_items)
             neg_items_emb = self.item_embedding(neg_items)
-            pos_score = torch.sum(enhanced_seq_output * pos_items_emb, dim=-1)  # [B]
-            neg_score = torch.sum(enhanced_seq_output * neg_items_emb, dim=-1)  # [B]
+            pos_score = torch.sum(seq_output * pos_items_emb, dim=-1)  # [B]
+            neg_score = torch.sum(seq_output * neg_items_emb, dim=-1)  # [B]
             rec_loss = self.loss_fct(pos_score, neg_score)
         else:  # self.loss_type = 'CE'
             test_item_emb = self.item_embedding.weight
-            logits = torch.matmul(enhanced_seq_output, test_item_emb.transpose(0, 1))
+            logits = torch.matmul(seq_output, test_item_emb.transpose(0, 1))
             rec_loss = self.loss_fct(logits, pos_items)
         
-        # 总损失 = 推荐损失 + KL权重 * JS散度损失 + 记忆权重 * 记忆模块损失
-        total_loss = rec_loss
-        
-        if js_loss != 0.0:
-            total_loss = total_loss + self.kl_weight * js_loss
+        # 检索器优化部分
+        if hasattr(self, 'seq_emb_index'):
+            # 检索相似序列和目标项
+            retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
+                seq_output, batch_user_id, batch_seq_len, topk=self.topk
+            )
             
-        if memory_loss != 0.0:
-            total_loss = total_loss + self.memory_weight * memory_loss
+            if retrieved_seqs.size(0) > 0:
+                batch_size, n_retrieved, dim = retrieved_seqs.size()                
+                # 使用检索器编码器处理序列表示
+                retriever_output = self.retriever_forward(seq_output)
+                
+                # 计算检索似然分布
+                retrieval_probs = self.compute_retrieval_scores(
+                    retriever_output.unsqueeze(1), retrieved_seqs
+                ).squeeze(1)
+                
+                # 计算推荐模型的评分分布
+                recommendation_probs = self.compute_recommendation_scores(
+                    seq_output, retrieved_seqs, retrieved_tars, pos_items
+                )
+                
+                # 分析分布差异 - 添加调试信息分析
+                self.analyze_distribution_differences(retrieval_probs, recommendation_probs, batch_size)
+                
+                # 计算JS散度损失
+                js_loss = self.compute_kl_loss(retrieval_probs, recommendation_probs)
+                
+                # 扩展查询表示以匹配检索结果维度
+                expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
+                
+                # 计算相似度作为注意力分数
+                attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
+                attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
+                
+                # 加权汇总检索到的目标表示
+                retrieved_targets_weighted = retrieved_tars * attention_weights
+                retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                
+                # 混合原始序列表示和检索增强表示
+                enhanced_seq_output = (1 - self.alpha) * seq_output + self.alpha * retrieved_knowledge
+                
+                # 使用增强表示计算额外的推荐损失
+                if self.loss_type == 'BPR':
+                    enhanced_pos_score = torch.sum(enhanced_seq_output * pos_items_emb, dim=-1)
+                    enhanced_neg_score = torch.sum(enhanced_seq_output * neg_items_emb, dim=-1)
+                    enhanced_rec_loss = self.loss_fct(enhanced_pos_score, enhanced_neg_score)
+                else:  # self.loss_type = 'CE'
+                    enhanced_logits = torch.matmul(enhanced_seq_output, test_item_emb.transpose(0, 1))
+                    enhanced_rec_loss = self.loss_fct(enhanced_logits, pos_items)
+                
+                
+                # 总损失
+                total_loss = self.enhanced_rec_weight * enhanced_rec_loss + self.kl_weight * js_loss
+            else:
+                # 如果没有检索到足够的序列，只使用原始损失
+                total_loss = rec_loss
+                
             
-        # 记录各部分损失
-        if hasattr(self, 'logger'):
-            self.logger.debug(f"Rec Loss: {rec_loss.item():.4f}")
-            if js_loss != 0.0:
-                self.logger.debug(f"JS Loss: {js_loss.item():.4f}")
-            if memory_loss != 0.0:
-                self.logger.debug(f"Memory Loss: {memory_loss.item():.4f}")
-            self.logger.debug(f"Total Loss: {total_loss.item():.4f}")
-        
-        return total_loss
+            return total_loss
+        else:
+            # 如果没有检索索引，只返回基础推荐损失
+            return rec_loss
 
     def full_sort_predict(self, interaction):
-        """使用检索增强的全排序预测，支持可微分记忆模块"""
+        """使用检索增强的全排序预测"""
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         
@@ -751,26 +799,44 @@ class FTragrec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)
         
         # 检索增强处理
-        if self.use_retrieval_for_predict and (
-            (hasattr(self, 'seq_emb_index') and self.seq_emb_index is not None) or
-            (self.use_diff_memory and hasattr(self, 'diff_memory'))
-        ):
+        if hasattr(self, 'seq_emb_index') and self.seq_emb_index is not None:
             try:
                 # 获取用户ID和序列长度用于检索过滤
                 batch_user_id = list(interaction[self.USER_ID].detach().cpu().numpy())
                 batch_seq_len = list(item_seq_len.detach().cpu().numpy())
                 
-                # 使用注意力机制的序列增强 (结合FAISS和可微分记忆)
-                enhanced_seq_output = self.sequence_augmentation(seq_output, batch_user_id, batch_seq_len)
+                # 使用检索器编码器处理序列表示
+                retriever_output = self.retriever_forward(seq_output)
                 
-                # 使用增强后的表示计算分数
-                test_items_emb = self.item_embedding.weight
-                scores = torch.matmul(enhanced_seq_output, test_items_emb.transpose(0, 1))
+                # 检索相似序列和目标项
+                retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
+                    seq_output, batch_user_id, batch_seq_len, topk=self.topk
+                )
                 
-                # 确保分数保留梯度信息
-                scores.requires_grad_(True)
-                return scores
-                
+                if retrieved_seqs.size(0) > 0:
+                    # 计算查询序列与检索序列的注意力权重
+                    batch_size, n_retrieved, dim = retrieved_seqs.size()
+                    
+                    # 扩展查询表示以匹配检索结果维度
+                    expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
+                    
+                    # 计算相似度作为注意力分数
+                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
+                    attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
+                    
+                    # 加权汇总检索到的目标表示
+                    retrieved_targets_weighted = retrieved_tars * attention_weights
+                    retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                    
+                    # 混合原始序列表示和检索增强表示
+                    alpha = self.alpha  # 使用混合权重参数
+                    enhanced_seq_output = (1 - alpha) * seq_output + alpha * retrieved_knowledge
+                    
+                    # 使用增强后的表示计算分数
+                    test_items_emb = self.item_embedding.weight
+                    scores = torch.matmul(enhanced_seq_output, test_items_emb.transpose(0, 1))
+                    return scores
+                    
             except Exception as e:
                 print(f"预测时检索增强失败: {e}")
                 # 发生错误时回退到基本预测
@@ -778,13 +844,10 @@ class FTragrec(SequentialRecommender):
         # 如果检索失败或没有检索索引，使用基本预测
         test_items_emb = self.item_embedding.weight
         scores = torch.matmul(seq_output, test_items_emb.transpose(0, 1))
-        
-        # 确保分数保留梯度信息
-        scores.requires_grad_(True)
         return scores
 
     def predict(self, interaction):
-        """使用检索增强的单物品预测，支持可微分记忆模块"""
+        """使用检索增强的单物品预测"""
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
         test_item = interaction[self.ITEM_ID]
@@ -793,26 +856,44 @@ class FTragrec(SequentialRecommender):
         seq_output = self.forward(item_seq, item_seq_len)
         
         # 检索增强处理
-        if self.use_retrieval_for_predict and (
-            (hasattr(self, 'seq_emb_index') and self.seq_emb_index is not None) or
-            (self.use_diff_memory and hasattr(self, 'diff_memory'))
-        ):
+        if hasattr(self, 'seq_emb_index') and self.seq_emb_index is not None:
             try:
                 # 获取用户ID和序列长度用于检索过滤
                 batch_user_id = list(interaction[self.USER_ID].detach().cpu().numpy())
                 batch_seq_len = list(item_seq_len.detach().cpu().numpy())
                 
-                # 使用注意力机制的序列增强 (结合FAISS和可微分记忆)
-                enhanced_seq_output = self.sequence_augmentation(seq_output, batch_user_id, batch_seq_len)
+                # 使用检索器编码器处理序列表示
+                retriever_output = self.retriever_forward(seq_output)
                 
-                # 使用增强后的表示计算分数
-                test_item_emb = self.item_embedding(test_item)
-                scores = torch.mul(enhanced_seq_output, test_item_emb).sum(dim=1)
+                # 检索相似序列和目标项
+                retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
+                    seq_output, batch_user_id, batch_seq_len, topk=self.topk
+                )
                 
-                # 确保分数保留梯度信息
-                scores.requires_grad_(True)
-                return scores
-                
+                if retrieved_seqs.size(0) > 0:
+                    # 计算查询序列与检索序列的注意力权重
+                    batch_size, n_retrieved, dim = retrieved_seqs.size()
+                    
+                    # 扩展查询表示以匹配检索结果维度
+                    expanded_seq = seq_output.unsqueeze(1).expand(-1, n_retrieved, -1)
+                    
+                    # 计算相似度作为注意力分数
+                    attention_scores = torch.sum(expanded_seq * retrieved_seqs, dim=-1) / self.predict_retrieval_temperature
+                    attention_weights = torch.softmax(attention_scores, dim=-1).unsqueeze(-1)
+                    
+                    # 加权汇总检索到的目标表示
+                    retrieved_targets_weighted = retrieved_tars * attention_weights
+                    retrieved_knowledge = torch.sum(retrieved_targets_weighted, dim=1)
+                    
+                    # 混合原始序列表示和检索增强表示
+                    alpha = self.alpha  # 使用混合权重参数
+                    enhanced_seq_output = (1 - alpha) * seq_output + alpha * retrieved_knowledge
+                    
+                    # 使用增强后的表示计算分数
+                    test_item_emb = self.item_embedding(test_item)
+                    scores = torch.mul(enhanced_seq_output, test_item_emb).sum(dim=1)
+                    return scores
+                    
             except Exception as e:
                 print(f"预测时检索增强失败: {e}")
                 # 发生错误时回退到基本预测
@@ -820,51 +901,217 @@ class FTragrec(SequentialRecommender):
         # 如果检索失败或没有检索索引，使用基本预测
         test_item_emb = self.item_embedding(test_item)
         scores = torch.mul(seq_output, test_item_emb).sum(dim=1)
-        
-        # 确保分数保留梯度信息
-        scores.requires_grad_(True)
         return scores
 
-    def sequence_augmentation(self, seq_output, batch_user_id, batch_seq_len, topk=None):
-        """使用注意力机制对序列表示进行增强，结合端到端可微检索
+    def _init_debug_stats(self):
+        """初始化调试统计信息收集器"""
+        self.debug_stats = {
+            'retrieval_probs': [],  # 检索器评分分布
+            'recommendation_probs': [],  # 推荐器评分分布
+            'js_divergence': [],  # JS散度
+            'kl_retrieval_to_rec': [],  # 检索器->推荐器的KL散度
+            'kl_rec_to_retrieval': [],  # 推荐器->检索器的KL散度
+            'distribution_entropy': {  # 各分布的熵
+                'retrieval': [],
+                'recommendation': []
+            },
+            'distribution_stats': {  # 各分布的统计信息（均值、方差等）
+                'retrieval': {'mean': [], 'var': [], 'max': [], 'min': []},
+                'recommendation': {'mean': [], 'var': [], 'max': [], 'min': []}
+            },
+            'step_counter': 0,  # 当前步数
+            'log_interval': 50,  # 日志记录间隔
+            'total_samples': 0  # 处理的样本总数
+        }
+        print("初始化调试统计信息收集器完成")
+
+    def analyze_distribution_differences(self, retrieval_probs, recommendation_probs, batch_size):
+        """分析检索器和推荐器评分分布的差异
         
         Args:
-            seq_output: 原始序列表示 [batch_size, hidden_size]
-            batch_user_id: 用户ID列表
-            batch_seq_len: 序列长度列表
-            topk: 检索的最近邻数量，默认使用self.topk
-            
-        Returns:
-            增强后的序列表示 [batch_size, hidden_size]
+            retrieval_probs: 检索分布 [batch_size, n_retrieved]
+            recommendation_probs: 推荐分布 [batch_size, n_retrieved]
+            batch_size: 当前批次大小
         """
-        if topk is None:
-            topk = self.topk
+        # 更新样本计数
+        self.debug_stats['total_samples'] += batch_size
+        self.debug_stats['step_counter'] += 1
         
-        # 部分一：从可微分记忆和/或FAISS索引中检索
-        retrieved_seqs, retrieved_tars = self.retrieve_seq_tar(
-            seq_output, batch_user_id, batch_seq_len, topk=topk
-        )
-        
-        # 如果检索到的序列为空或只有一个很小的值(检索失败情况)，直接返回原始表示
-        if retrieved_seqs.size(0) == 0 or (retrieved_seqs.size(1) <= 1 and torch.sum(retrieved_seqs).item() < 1e-6):
-            return seq_output
+        # 只在特定步数记录详细信息，避免内存占用过大
+        if self.debug_stats['step_counter'] % self.debug_stats['log_interval'] != 0:
+            return
             
-        # 使用注意力机制融合信息
-        # 以序列作为query，检索序列作为key，检索目标项作为value
-        # 将序列扩展为3D张量 [batch_size, 1, hidden_size]
-        query = seq_output.unsqueeze(1)
+        # 为避免数据过多，只保存部分样本的分布
+        sample_idx = torch.randint(0, batch_size, (min(3, batch_size),))
+        r_probs = retrieval_probs[sample_idx].detach().cpu()
+        rec_probs = recommendation_probs[sample_idx].detach().cpu()
         
-        # 应用注意力层: query-key-value注意力
-        augmented_output = self.seq_tar_attention(query, retrieved_seqs, retrieved_tars)
+        # 存储分布样本
+        self.debug_stats['retrieval_probs'].append(r_probs)
+        self.debug_stats['recommendation_probs'].append(rec_probs)
         
-        # 通过前馈网络进一步处理
-        augmented_output = self.seq_tar_fnn(augmented_output)
+        # 计算分布的熵
+        eps = 1e-8
+        entropy_retrieval = -torch.sum(r_probs * torch.log(r_probs + eps), dim=1).mean().item()
+        entropy_rec = -torch.sum(rec_probs * torch.log(rec_probs + eps), dim=1).mean().item()
         
-        # 混合原始表示和增强表示
-        alpha = self.alpha
-        enhanced_seq_output = (1 - alpha) * seq_output + alpha * augmented_output
+        self.debug_stats['distribution_entropy']['retrieval'].append(entropy_retrieval)
+        self.debug_stats['distribution_entropy']['recommendation'].append(entropy_rec)
         
-        # 确保增强后的表示保留梯度信息
-        enhanced_seq_output.requires_grad_(True)
+        # 计算KL散度
+        kl_r_to_rec = torch.sum(r_probs * torch.log((r_probs + eps) / (rec_probs + eps)), dim=1).mean().item()
+        kl_rec_to_r = torch.sum(rec_probs * torch.log((rec_probs + eps) / (r_probs + eps)), dim=1).mean().item()
         
-        return enhanced_seq_output
+        self.debug_stats['kl_retrieval_to_rec'].append(kl_r_to_rec)
+        self.debug_stats['kl_rec_to_retrieval'].append(kl_rec_to_r)
+        
+        # JS散度
+        js_divergence = 0.5 * (kl_r_to_rec + kl_rec_to_r)
+        self.debug_stats['js_divergence'].append(js_divergence)
+        
+        # 统计基本指标
+        for name, probs in [('retrieval', r_probs), ('recommendation', rec_probs)]:
+            self.debug_stats['distribution_stats'][name]['mean'].append(probs.mean().item())
+            self.debug_stats['distribution_stats'][name]['var'].append(probs.var().item())
+            self.debug_stats['distribution_stats'][name]['max'].append(probs.max().item())
+            self.debug_stats['distribution_stats'][name]['min'].append(probs.min().item())
+        
+        # 定期输出分析结果
+        if len(self.debug_stats['js_divergence']) % 5 == 0:
+            # 计算平均JS散度
+            avg_js = sum(self.debug_stats['js_divergence'][-5:]) / 5
+            # 计算熵的差异
+            avg_entropy_diff = sum([r - m for r, m in zip(
+                self.debug_stats['distribution_entropy']['retrieval'][-5:],
+                self.debug_stats['distribution_entropy']['recommendation'][-5:]
+            )]) / 5
+            
+            # 判断分布是否有明显差异
+            has_significant_diff = avg_js > 0.1 or abs(avg_entropy_diff) > 0.3
+            
+            # 输出结果
+            print(f"\n分布差异分析 (样本数: {self.debug_stats['total_samples']}):")
+            print(f"  平均JS散度: {avg_js:.4f} {'(显著)' if avg_js > 0.1 else ''}")
+            print(f"  熵差异(检索-推荐): {avg_entropy_diff:.4f} {'(显著)' if abs(avg_entropy_diff) > 0.3 else ''}")
+            print(f"  检索器分布: 均值={self.debug_stats['distribution_stats']['retrieval']['mean'][-1]:.4f}, " +
+                  f"方差={self.debug_stats['distribution_stats']['retrieval']['var'][-1]:.4f}")
+            print(f"  推荐器分布: 均值={self.debug_stats['distribution_stats']['recommendation']['mean'][-1]:.4f}, " +
+                  f"方差={self.debug_stats['distribution_stats']['recommendation']['var'][-1]:.4f}")
+            
+            # 提供分析结论
+            if has_significant_diff:
+                if avg_entropy_diff > 0:
+                    print("  结论: 检索分布更加均匀，推荐分布更加集中。对齐可能有助于让检索器学习更有判别性的表示。")
+                else:
+                    print("  结论: 推荐分布更加均匀，检索分布更加集中。对齐可能有助于让推荐器关注更多相关项。")
+                    
+                if avg_js > 0.3:
+                    print("  建议: 考虑增加KL损失权重(kl_weight)以加强分布对齐。")
+                    
+            else:
+                print("  结论: 两种分布较为接近，当前的对齐策略效果良好。")
+
+    def summarize_distribution_analysis(self):
+        """总结分布差异分析结果，提供关于检索器和推荐器分布对齐的见解"""
+        if not hasattr(self, 'debug_stats') or len(self.debug_stats['js_divergence']) == 0:
+            print("没有足够的分布差异分析数据可供总结")
+            return
+            
+        # 计算平均指标
+        avg_js = sum(self.debug_stats['js_divergence']) / len(self.debug_stats['js_divergence'])
+        avg_kl_r_to_rec = sum(self.debug_stats['kl_retrieval_to_rec']) / len(self.debug_stats['kl_retrieval_to_rec'])
+        avg_kl_rec_to_r = sum(self.debug_stats['kl_rec_to_retrieval']) / len(self.debug_stats['kl_rec_to_retrieval'])
+        
+        avg_entropy_retrieval = sum(self.debug_stats['distribution_entropy']['retrieval']) / len(self.debug_stats['distribution_entropy']['retrieval'])
+        avg_entropy_rec = sum(self.debug_stats['distribution_entropy']['recommendation']) / len(self.debug_stats['distribution_entropy']['recommendation'])
+        
+        # 计算趋势(后半部分与前半部分的差异)
+        half_point = len(self.debug_stats['js_divergence']) // 2
+        if half_point > 0:
+            js_trend = sum(self.debug_stats['js_divergence'][half_point:]) / half_point - sum(self.debug_stats['js_divergence'][:half_point]) / half_point
+            entropy_r_trend = sum(self.debug_stats['distribution_entropy']['retrieval'][half_point:]) / half_point - sum(self.debug_stats['distribution_entropy']['retrieval'][:half_point]) / half_point
+            entropy_rec_trend = sum(self.debug_stats['distribution_entropy']['recommendation'][half_point:]) / half_point - sum(self.debug_stats['distribution_entropy']['recommendation'][:half_point]) / half_point
+        else:
+            js_trend = entropy_r_trend = entropy_rec_trend = 0
+            
+        # 输出总结报告
+        print("\n" + "="*80)
+        print("检索器与推荐器分布对齐分析总结")
+        print("="*80)
+        print(f"分析样本总数: {self.debug_stats['total_samples']}")
+        print(f"数据点数量: {len(self.debug_stats['js_divergence'])}")
+        print("\n分布差异指标:")
+        print(f"  平均JS散度: {avg_js:.4f}  趋势: {'↓ 减小' if js_trend < -0.01 else '↑ 增大' if js_trend > 0.01 else '→ 稳定'} ({js_trend:.4f})")
+        print(f"  检索->推荐 KL散度: {avg_kl_r_to_rec:.4f}")
+        print(f"  推荐->检索 KL散度: {avg_kl_rec_to_r:.4f}")
+        print(f"  检索分布平均熵: {avg_entropy_retrieval:.4f}  趋势: {'↓ 减小' if entropy_r_trend < -0.01 else '↑ 增大' if entropy_r_trend > 0.01 else '→ 稳定'} ({entropy_r_trend:.4f})")
+        print(f"  推荐分布平均熵: {avg_entropy_rec:.4f}  趋势: {'↓ 减小' if entropy_rec_trend < -0.01 else '↑ 增大' if entropy_rec_trend > 0.01 else '→ 稳定'} ({entropy_rec_trend:.4f})")
+        
+        # 判断对齐质量
+        alignment_quality = "未知"
+        if avg_js < 0.05:
+            alignment_quality = "极佳"
+        elif avg_js < 0.1:
+            alignment_quality = "良好"
+        elif avg_js < 0.2:
+            alignment_quality = "一般"
+        elif avg_js < 0.3:
+            alignment_quality = "较差"
+        else:
+            alignment_quality = "极差"
+            
+        print(f"\n分布对齐质量评估: {alignment_quality}")
+        
+        # 分析分布特性
+        if avg_entropy_retrieval > avg_entropy_rec + 0.1:
+            print("检索分布特点: 更加均匀，关注更多候选项")
+            print("推荐分布特点: 更加集中，重点关注少数候选项")
+        elif avg_entropy_rec > avg_entropy_retrieval + 0.1:
+            print("检索分布特点: 更加集中，重点关注少数候选项")
+            print("推荐分布特点: 更加均匀，关注更多候选项")
+        else:
+            print("两种分布具有相似的熵特性")
+            
+        # 分析对齐趋势
+        if js_trend < -0.05:
+            print("\n优化趋势: 分布差异显著减小，对齐效果明显改善")
+        elif js_trend < -0.01:
+            print("\n优化趋势: 分布差异逐渐减小，对齐效果有所改善")
+        elif js_trend > 0.05:
+            print("\n优化趋势: 分布差异显著增大，对齐效果明显恶化")
+        elif js_trend > 0.01:
+            print("\n优化趋势: 分布差异略有增大，对齐效果略有恶化")
+        else:
+            print("\n优化趋势: 分布差异保持稳定")
+            
+        # 提供建议
+        print("\n优化建议:")
+        if avg_js > 0.2:
+            print("- 考虑增加KL损失权重(kl_weight)以加强分布对齐")
+            if js_trend > 0:
+                print("- 当前KL损失权重可能过低，导致分布差异持续增大")
+                print(f"- 建议将kl_weight从{self.kl_weight}提高到{min(0.5, self.kl_weight * 2)}")
+        elif avg_js < 0.05 and js_trend < 0:
+            print("- 当前对齐效果良好，可考虑略微降低KL损失权重以平衡其他训练目标")
+            print(f"- 建议将kl_weight从{self.kl_weight}降低到{max(0.01, self.kl_weight * 0.8)}")
+        
+        if abs(avg_entropy_retrieval - avg_entropy_rec) > 0.3:
+            high_entropy = "检索器" if avg_entropy_retrieval > avg_entropy_rec else "推荐器"
+            low_entropy = "推荐器" if avg_entropy_retrieval > avg_entropy_rec else "检索器"
+            print(f"- {high_entropy}分布过于均匀，{low_entropy}分布过于集中，差异过大可能不利于模型性能")
+            print(f"- 考虑调整温度参数(retriever_temperature)以改变分布形状")
+            
+        print("="*80)
+        
+        # 重置统计信息以准备下一轮收集
+        self.debug_stats['retrieval_probs'] = []
+        self.debug_stats['recommendation_probs'] = []
+        self.debug_stats['js_divergence'] = []
+        self.debug_stats['kl_retrieval_to_rec'] = []
+        self.debug_stats['kl_rec_to_retrieval'] = []
+        self.debug_stats['distribution_entropy']['retrieval'] = []
+        self.debug_stats['distribution_entropy']['recommendation'] = []
+        for stat in self.debug_stats['distribution_stats']['retrieval']:
+            self.debug_stats['distribution_stats']['retrieval'][stat] = []
+        for stat in self.debug_stats['distribution_stats']['recommendation']:
+            self.debug_stats['distribution_stats']['recommendation'][stat] = []

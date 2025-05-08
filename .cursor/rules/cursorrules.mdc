@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: false
+---
+---
 description: 项目目的: 实现名为FTRagRec的新型推荐模型
 globs: *.py/*.yaml
 alwaysApply: false
